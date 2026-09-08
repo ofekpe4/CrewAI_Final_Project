@@ -1,0 +1,44 @@
+# Harbor & Vale — project settings (non-secret).
+#
+# Filesystem paths are owned by src/harbor_vale/io_paths.py, NOT this file.
+# This file holds tunable, non-secret values only.
+# Secrets never live here: OPENAI_API_KEY belongs in .env (gitignored).
+# See PROJECT_PLAN.md §B.2, §L, §Q, §R.
+
+project_name: harbor_vale
+
+# Deterministic seeds — PROJECT_PLAN.md §R.1 / §Q.4
+seeds:
+  python_hash: 0          # exported as PYTHONHASHSEED by the pipeline entrypoint
+  numpy: 42
+  sklearn_random_state: 42
+
+# LLM configuration — the single place model / provider / temperature are set
+# (PROJECT_PLAN.md §L "המקום היחיד שבו LLM מוגדר", §V.2 N2, §Q.4).
+# config/llm.py reads this block. The API key itself is read from the environment
+# variable named below, at execution time only — never stored here.
+llm:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.1
+  api_key_env: OPENAI_API_KEY
+
+# Logging levels — PROJECT_PLAN.md §Q.1 (console INFO, file DEBUG).
+# src/harbor_vale/logging_setup.py defaults match these.
+logging:
+  console_level: INFO
+  file_level: DEBUG
+
+# Validation-gate tolerances — PROJECT_PLAN.md §E.2 / §F / §N.5.
+# Provisional defaults; calibrated against real data in Phase 4.
+validation:
+  scale_drift_median_rel_tolerance: 0.25
+  target_positive_rate_tolerance_abs: 0.05
+
+# Business context — PROVISIONAL. The dataset is not locked until Phase 2
+# (PROJECT_PLAN.md §A.7 "לא לנעול דאטהסט מוקדם מדי", §J). Do not treat as
+# authoritative; Phase 2 replaces this with source-documented values.
+business_context:
+  domain: customer_churn
+  task_type: binary_classification
+  status: provisional
