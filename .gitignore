@@ -1,0 +1,28 @@
+# --- Secrets (never commit) ---
+.env
+*.key
+.streamlit/secrets.toml
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# --- Virtual environment (project-local, not tracked) ---
+.venv/
+venv/
+env/
+
+# --- Data: raw inputs are downloaded, not committed ---
+data/raw/*
+!data/raw/.gitkeep
+
+# --- Run outputs / archives ---
+runs/
+logs/
+
+# --- OS / tooling noise ---
+.DS_Store
+.pytest_cache/
+.coverage
+htmlcov/
