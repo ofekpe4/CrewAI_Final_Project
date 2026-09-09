@@ -1,0 +1,243 @@
+# Harbor & Vale — Industry-Simulated AI Product Workflow
+
+Two CrewAI crews separated by a **machine-enforced dataset contract** and a
+**deterministic validation gate**. The interesting part is not the ML — it is the
+*seam*: a contract that one crew writes and the other must honour, and a Flow that
+checks it before anything downstream is allowed to run.
+
+> **Status: Phase 0 (project foundation) only.**
+> The environment, repository skeleton, and core infrastructure (paths, config,
+> logging) exist and are tested. **The crews, the Flow, the dataset pipeline, the
+> validation gate, the models, and the Streamlit app are *not* implemented yet.**
+> See [Project status](#project-status) below.
+
+---
+
+## Why this project exists
+
+The scenario it simulates: analysts changed `order_value` from cents to dollars,
+renamed some fields, and dropped a column. A churn model loaded that data,
+trained, and served predictions — **without a single error**. Weeks of retention
+budget were spent on exactly the wrong customers.
+
+The failure was not technical. It was **semantic**. Schema checks pass this by
+construction: `float64` is still `float64`. So the design here records an agreed
+*distributional snapshot* of the data in a contract, and checks new data against
+it — separating **what was measured** from **what is enforced, with justification**.
+
+The authoritative architecture and plan live in
+[`PROJECT_PLAN.md`](PROJECT_PLAN.md). This README is a working entry point, not a
+substitute for it.
+
+---
+
+## Architecture at a glance (planned)
+
+```
+data/raw/*  ──►  Crew 1 (Data Analyst, 3 agents)  ──►  THE HANDOFF  ──►  Validation Gate  ──►  Crew 2 (Data Scientist, 3 agents)
+                 Quality Inspector                     clean_data.csv      deterministic          Feature Engineer
+                 EDA & Insights Analyst                dataset_contract.json   Python, never        Modeling Specialist
+                 Data Contract Architect               (exactly these 2)       an LLM decision      Responsible AI Documenter
+```
+
+- **Agent plans, Python executes.** Agents produce structured plans; Pydantic
+  guardrails validate them; deterministic Python performs every precision-critical
+  step (cleaning, measurement, validation, model selection).
+- **The gate is pure Python.** PASS/FAIL before Crew 2 is a deterministic decision
+  with zero LLM involvement.
+- **The handoff is exactly two files.** Crew 2 is mechanically blocked from raw
+  data and from Crew 1 internals.
+- A CrewAI **Flow** orchestrates the whole run and routes on the gate result.
+
+None of the above is built yet — it is the target described in `PROJECT_PLAN.md`
+§C–§H.
+
+---
+
+## Requirements
+
+| | |
+|---|---|
+| **Python** | **3.12.x**, CPython, **not** from Anaconda/Conda. The project is developed on Homebrew Python `3.12.14`; any non-Conda 3.12 works. CrewAI `1.15.20` supports `>=3.10,<3.14`; 3.12 was chosen to reduce install risk. |
+| **OS** | Developed on macOS (Apple Silicon). Linux should work; not yet tested. |
+| **Anaconda / Conda** | **Not used and not required.** Do not install this project's dependencies into a Conda `base` or global environment, even if your shell shows `(base)`. |
+| **LLM API key** | **Not needed for Phase 0–5.** Crew execution (Phase 6+) will need an `OPENAI_API_KEY`; see [Configuration](#configuration). |
+
+---
+
+## Setup (Anaconda-free)
+
+From a clean clone, in the project root:
+
+```bash
+# 1. Create a project-local virtual environment with a non-Conda Python 3.12
+python3.12 -m venv .venv
+
+# 2. Activate it  (bash/zsh)
+source .venv/bin/activate
+#    fish:            source .venv/bin/activate.fish
+#    Windows PowerShell:  .venv\Scripts\Activate.ps1
+
+# 3. Confirm the interpreter is the project venv, not Conda
+python --version                 # -> Python 3.12.x
+python -c "import sys; print(sys.prefix)"       # -> .../CrewAI_Final_Project/.venv
+python -c "import sys; print(sys.base_prefix)"  # -> a non-Conda Python 3.12
+
+# 4. Install the pinned dependencies
+python -m pip install -r requirements.txt
+```
+
+If `python3.12` is not on your `PATH`, install a non-Conda build first — e.g.
+`brew install python@3.12` (macOS) or from <https://www.python.org/downloads/> —
+then use its `python3.12` for step 1. Never use a Conda interpreter.
+
+`requirements.txt` is a full, exact lock (`pip freeze` output) of the environment
+that Phase 0 was verified against: `crewai==1.15.20` plus its transitive
+dependencies, 134 pinned distributions. It will be regenerated when later phases
+add project dependencies (pandas, scikit-learn, matplotlib/seaborn, Streamlit,
+and dev tooling).
+
+### Verify the install
+
+```bash
+# CrewAI import smoke test (the Phase 0 acceptance check)
+python -c "from crewai import Agent, Task, Crew, Process; \
+from crewai.flow.flow import Flow, listen, start, router; print('crewai imports OK')"
+
+python -m pip check          # -> No broken requirements found.
+```
+
+---
+
+## Configuration
+
+- **`config/settings.yaml`** — non-secret tunables only: deterministic seeds, the
+  LLM model/provider/temperature, logging levels, validation tolerances, and a
+  *provisional* business-context block. No paths, no secrets.
+- **`config/llm.py`** — the single source of truth for LLM configuration. Reads
+  `settings.yaml`; never reads the API key on import. `require_api_key()` is meant
+  to be called only at execution time (Phase 6+).
+- **`src/harbor_vale/io_paths.py`** — the single source of truth for filesystem
+  paths. `PROJECT_ROOT` is derived from the file location; there are no
+  machine-specific absolute paths anywhere in the project.
+
+### Secrets
+
+Secrets live in a git-ignored `.env` file, never in the repo.
+[`.env.example`](.env.example) lists the variable **names** only:
+
+```bash
+cp .env.example .env
+# then edit .env and add your key (only needed from Phase 6 onward)
+```
+
+---
+
+## Project structure
+
+```
+CrewAI_Final_Project/
+├── PROJECT_PLAN.md              # authoritative architecture + plan (source of truth)
+├── README.md                   # this file
+├── requirements.txt            # exact dependency lock (pip freeze)
+├── .env.example                # secret NAMES only; real .env is git-ignored
+├── conftest.py                 # test import bootstrap (repo root + src/ on sys.path)
+│
+├── config/
+│   ├── settings.yaml           # non-secret tunables
+│   ├── llm.py                  # single source of LLM config           [implemented]
+│   └── narrative_fallbacks/    # (placeholder — Phase 6)
+│
+├── src/harbor_vale/
+│   ├── io_paths.py             # single source of path truth           [implemented]
+│   ├── logging_setup.py        # console + optional per-run file log   [implemented]
+│   ├── contract/  access/  tools/  ml/  plans/  demo/  templates/      # (placeholders)
+│   ├── crews/{analyst_crew,scientist_crew}/                            # (placeholders)
+│   └── flow/                                                           # (placeholder)
+│
+├── app/                        # Streamlit UI                          (placeholder — Phase 9)
+├── data/raw/                   # downloaded datasets, git-ignored      (placeholder — Phase 2)
+├── artifacts/{crew1,validation,crew2}/                                 (placeholders — run outputs)
+├── scripts/  spike/  docs/                                             (placeholders)
+├── tests/{unit,integration,failure,smoke,fixtures}/
+│   └── unit/{test_io_paths.py, test_logging_setup.py}                  [implemented]
+└── working flow/               # per-session development log
+```
+
+Directories marked *(placeholder)* currently contain only a `.gitkeep` and will be
+filled in the phase noted. `PROJECT_PLAN.md` §L has the complete target layout.
+
+---
+
+## Running the tests
+
+`pytest` is **not installed yet** (it is a dev dependency, added in a later phase
+together with `requirements-dev.txt`). The Phase 0 unit tests are written in
+pytest style **and** are runnable directly with the interpreter:
+
+```bash
+source .venv/bin/activate
+python tests/unit/test_io_paths.py        # 9 checks — path layer
+python tests/unit/test_logging_setup.py   # 7 checks — logging foundation
+```
+
+Each prints `PASS`/`FAIL` per check and exits non-zero on any failure. Once
+`pytest` is added, `pytest` from the project root will discover the same files
+unchanged (`conftest.py` already wires the import paths).
+
+---
+
+## Project status
+
+### Done — Phase 0: project foundation
+
+- [x] Project-local `.venv` on non-Conda **Python 3.12.14**, isolated from Conda `base`.
+- [x] **CrewAI 1.15.20** installed; import smoke test passes
+      (`Agent, Task, Crew, Process`; `Flow, listen, start, router`).
+- [x] `requirements.txt` — exact pinned lock; `pip check` clean.
+- [x] Git repository initialised; `.gitignore`; `.env.example` (names only); `.env` git-ignored.
+- [x] Full directory skeleton per `PROJECT_PLAN.md` §L.
+- [x] `src/harbor_vale/io_paths.py` — deterministic central path layer, zero machine-specific paths.
+- [x] `src/harbor_vale/logging_setup.py` — console + optional per-run file logging, idempotent.
+- [x] `config/settings.yaml` + `config/llm.py` — non-secret config; import needs no API key.
+- [x] Unit tests for the path and logging layers (16 checks, all passing).
+
+### Not started
+
+Everything else. Specifically **not implemented and not working yet**:
+
+- CrewAI **execution-pattern spike** (Phase 1) — the hard prerequisite for any agent code.
+- **Dataset** selection / download / documentation (Phase 2).
+- **Dataset contract** schema and builder (Phase 3).
+- **Validation gate** (Phase 4).
+- Deterministic **tools** and the handoff allowlist (Phase 5).
+- **Crew 1** (Data Analyst) and **Crew 2** (Data Scientist) (Phases 6–7).
+- The **Flow** orchestration and failure demo (Phases 8, 10).
+- **Streamlit** app (Phase 9).
+- Any trained **model**, evaluation report, or model card.
+
+There is no runnable pipeline yet. `make run` / `make demo-fail` do not exist.
+
+---
+
+## Reproducibility (planned framing)
+
+The deterministic layer of this pipeline is intended to be fully reproducible:
+given the same inputs and the same stored agent plans, it produces identical
+artifacts. The agent layer is not — LLM outputs vary between runs. That is
+precisely why every agent decision is captured as a structured plan artifact, and
+why all execution is performed by deterministic Python. Seeds
+(`PYTHONHASHSEED=0`, `numpy` 42, sklearn `random_state=42`) are pinned in
+`config/settings.yaml`.
+
+---
+
+## Development log
+
+Every meaningful work session is recorded under [`working flow/`](working%20flow/)
+with a fixed 11-heading format. Start there (latest file) to see exactly what has
+been done and what is next.
+
+## License
+
+Not yet specified.
