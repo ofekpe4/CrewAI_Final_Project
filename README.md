@@ -5,10 +5,15 @@ Two CrewAI crews separated by a **machine-enforced dataset contract** and a
 *seam*: a contract that one crew writes and the other must honour, and a Flow that
 checks it before anything downstream is allowed to run.
 
-> **Status: Phase 0 (project foundation) only.**
+> **Status: Phases 0–1 complete.**
 > The environment, repository skeleton, and core infrastructure (paths, config,
-> logging) exist and are tested. **The crews, the Flow, the dataset pipeline, the
-> validation gate, the models, and the Streamlit app are *not* implemented yet.**
+> logging) exist and are tested (Phase 0). The CrewAI execution-pattern spike is
+> resolved (Phase 1): the orchestration pattern is **Pattern A** — one `Crew` of
+> 3 sequential `Task`s per crew, each with `output_pydantic` + `guardrail` +
+> deterministic `callback` + explicit `context=`, wrapped by a `Flow` that routes
+> on the gate result. See [`docs/architecture.md`](docs/architecture.md).
+> **The crews, the Flow, the dataset pipeline, the validation gate, the models,
+> and the Streamlit app are *not* implemented yet.**
 > See [Project status](#project-status) below.
 
 ---
@@ -49,7 +54,10 @@ data/raw/*  ──►  Crew 1 (Data Analyst, 3 agents)  ──►  THE HANDOFF  
   data and from Crew 1 internals.
 - A CrewAI **Flow** orchestrates the whole run and routes on the gate result.
 
-None of the above is built yet — it is the target described in `PROJECT_PLAN.md`
+The orchestration pattern (**Pattern A**) and the exact CrewAI `1.15.20` runtime
+behaviour it relies on are decided and documented in
+[`docs/architecture.md`](docs/architecture.md) (Phase 1 spike). None of the
+pipeline itself is built yet — it is the target described in `PROJECT_PLAN.md`
 §C–§H.
 
 ---
@@ -158,7 +166,9 @@ CrewAI_Final_Project/
 ├── app/                        # Streamlit UI                          (placeholder — Phase 9)
 ├── data/raw/                   # downloaded datasets, git-ignored      (placeholder — Phase 2)
 ├── artifacts/{crew1,validation,crew2}/                                 (placeholders — run outputs)
-├── scripts/  spike/  docs/                                             (placeholders)
+├── scripts/                                                            (placeholder — Phase 8)
+├── spike/                       # Phase 1 disposable spikes (task_1_1..task_1_6) [evidence]
+├── docs/architecture.md         # orchestration decision + CrewAI 1.15.20 findings [Phase 1]
 ├── tests/{unit,integration,failure,smoke,fixtures}/
 │   └── unit/{test_io_paths.py, test_logging_setup.py}                  [implemented]
 └── working flow/               # per-session development log
@@ -202,11 +212,25 @@ unchanged (`conftest.py` already wires the import paths).
 - [x] `config/settings.yaml` + `config/llm.py` — non-secret config; import needs no API key.
 - [x] Unit tests for the path and logging layers (16 checks, all passing).
 
+### Done — Phase 1: CrewAI execution-pattern spike
+
+- [x] `output_pydantic`, `guardrail` + retry, `callback` timing, `context=[task]`,
+      `Literal` tool enforcement, and `Flow` / `@router` / `or_` / `and_` all
+      verified at runtime against the pinned **`crewai==1.15.20`**
+      (`spike/task_1_1_*.py` … `spike/task_1_6_*.py`).
+- [x] Orchestration decision: **Pattern A** (one sequential `Crew` per crew;
+      `Agent → validated plan → guardrail → deterministic callback → artifact →
+      next Agent`), with **Pattern B** kept as a documented fallback.
+- [x] [`docs/architecture.md`](docs/architecture.md) records the decision, the
+      proven `1.15.20` behaviour, the failure modes, and the boundaries production
+      code must follow.
+- [x] No production `Agent` / `Task` / `Crew` / `Flow` written — spike code only,
+      marked disposable.
+
 ### Not started
 
 Everything else. Specifically **not implemented and not working yet**:
 
-- CrewAI **execution-pattern spike** (Phase 1) — the hard prerequisite for any agent code.
 - **Dataset** selection / download / documentation (Phase 2).
 - **Dataset contract** schema and builder (Phase 3).
 - **Validation gate** (Phase 4).
