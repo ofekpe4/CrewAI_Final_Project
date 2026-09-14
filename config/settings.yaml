@@ -30,7 +30,21 @@ logging:
   file_level: DEBUG
 
 # Validation-gate tolerances — PROJECT_PLAN.md §E.2 / §F / §N.5.
-# Provisional defaults; calibrated against real data in Phase 4.
+#
+# CALIBRATED (Phase 4 close-out) against the real Telco Customer Churn
+# dataset (bootstrap resampling, n_iter=3000, seed 42) — see
+# docs/validation_calibration.md for the full method, evidence table, and
+# decision. No longer provisional.
+#
+# NOT read by contract/validator.py at validation time, and never will be:
+# the sole authoritative, enforced source of tolerance policy is each
+# DatasetContract's own declared per-column `scale_drift`/`target.drift`
+# constraints (§E.1 rule 6, "נאכף ב-Python בלבד" — enforced only from what
+# the contract itself declares). These two values are a calibrated
+# SUGGESTED DEFAULT for the Data Contract Architect agent to start from
+# when authoring a ContractDraft (Phase 6+) — the agent still writes its
+# own justification and may choose a different tolerance per column where
+# the evidence for that column warrants one.
 validation:
   scale_drift_median_rel_tolerance: 0.25
   target_positive_rate_tolerance_abs: 0.05

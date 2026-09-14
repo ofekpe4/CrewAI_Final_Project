@@ -279,6 +279,14 @@ unchanged (`conftest.py` already wires the import paths).
       target, constraints, scale_drift, integrity, modeling), **zero LLM
       calls**. `passed = (errors == 0)`; the gate runs every applicable check
       and collects every finding, never stopping at the first failure.
+- [x] Family A checks all **four** required Crew 1 artifacts
+      (`clean_data.csv`, `dataset_contract.json`, `eda_report.html`,
+      `insights.md`) present/non-empty — the latter two by existence/size
+      only, never read, so the Crew 1 → Crew 2 handoff boundary (§G.0) is
+      not widened.
+- [x] `config/settings.yaml`'s `validation:` tolerances calibrated against
+      the real Telco dataset (bootstrap evidence) and marked final, not
+      provisional — see [`docs/validation_calibration.md`](docs/validation_calibration.md).
 - [x] `ValidationFinding` / `ValidationReport` (Pydantic) + `render_validation_report_markdown`.
 - [x] Scale-drift detection (§E.3): the mandatory incident reproduction —
       `monthly_charges × 100`, dtype unchanged — is caught and reported as
