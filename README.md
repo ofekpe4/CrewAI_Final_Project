@@ -5,15 +5,22 @@ Two CrewAI crews separated by a **machine-enforced dataset contract** and a
 *seam*: a contract that one crew writes and the other must honour, and a Flow that
 checks it before anything downstream is allowed to run.
 
-> **Status: Phases 0–1 complete.**
-> The environment, repository skeleton, and core infrastructure (paths, config,
-> logging) exist and are tested (Phase 0). The CrewAI execution-pattern spike is
-> resolved (Phase 1): the orchestration pattern is **Pattern A** — one `Crew` of
-> 3 sequential `Task`s per crew, each with `output_pydantic` + `guardrail` +
-> deterministic `callback` + explicit `context=`, wrapped by a `Flow` that routes
-> on the gate result. See [`docs/architecture.md`](docs/architecture.md).
-> **The crews, the Flow, the dataset pipeline, the validation gate, the models,
-> and the Streamlit app are *not* implemented yet.**
+> **Status: Phases 0–4 complete.**
+> The environment and core infrastructure exist and are tested (Phase 0). The
+> CrewAI execution-pattern spike is resolved (Phase 1): **Pattern A** — one
+> `Crew` of 3 sequential `Task`s per crew, each with `output_pydantic` +
+> `guardrail` + deterministic `callback` + explicit `context=`, wrapped by a
+> `Flow` that routes on the gate result. See
+> [`docs/architecture.md`](docs/architecture.md). The dataset is selected and
+> reproducibly acquired (Phase 2). The Dataset Contract schema — `observed` vs.
+> `constraints`, never one becoming the other — is built and tested (Phase 3).
+> The **deterministic Validation Gate** now exists and is fully tested
+> (Phase 4): it checks a candidate `clean_data.csv` against a
+> `dataset_contract.json` with **zero LLM calls**, and is the sole future
+> PASS/FAIL authority before Crew 2 runs. See
+> [`docs/contract_spec.md`](docs/contract_spec.md).
+> **The crews, the Flow, the deterministic tools/handoff allowlist, the
+> trained model, and the Streamlit app are *not* implemented yet.**
 > See [Project status](#project-status) below.
 
 ---
@@ -159,18 +166,22 @@ CrewAI_Final_Project/
 ├── src/harbor_vale/
 │   ├── io_paths.py             # single source of path truth           [implemented]
 │   ├── logging_setup.py        # console + optional per-run file log   [implemented]
-│   ├── contract/  access/  tools/  ml/  plans/  demo/  templates/      # (placeholders)
+│   ├── contract/                # schema.py · builder.py · validator.py [implemented — Phase 3–4]
+│   ├── plans/contract_draft.py  # ContractDraft + guardrail             [implemented — Phase 3]
+│   ├── demo/fault_injection.py  # deterministic mutation helpers (tests-only) [implemented — Phase 4]
+│   ├── access/  tools/  ml/  templates/                                # (placeholders)
 │   ├── crews/{analyst_crew,scientist_crew}/                            # (placeholders)
 │   └── flow/                                                           # (placeholder)
 │
 ├── app/                        # Streamlit UI                          (placeholder — Phase 9)
-├── data/raw/                   # downloaded datasets, git-ignored      (placeholder — Phase 2)
+├── data/raw/                   # downloaded datasets, git-ignored      [implemented — Phase 2]
 ├── artifacts/{crew1,validation,crew2}/                                 (placeholders — run outputs)
-├── scripts/                                                            (placeholder — Phase 8)
+├── scripts/download_data.py     # reproducible dataset acquisition      [implemented — Phase 2]
 ├── spike/                       # Phase 1 disposable spikes (task_1_1..task_1_6) [evidence]
-├── docs/architecture.md         # orchestration decision + CrewAI 1.15.20 findings [Phase 1]
+├── docs/architecture.md         # orchestration decision + CrewAI 1.15.20 findings [Phase 1, corrected Phase 3]
+├── docs/contract_spec.md        # Dataset Contract specification                  [Phase 3]
 ├── tests/{unit,integration,failure,smoke,fixtures}/
-│   └── unit/{test_io_paths.py, test_logging_setup.py}                  [implemented]
+│   └── unit/  — Phase 0–4 unit tests (see "Running the tests" above)  [implemented]
 └── working flow/               # per-session development log
 ```
 
@@ -187,8 +198,22 @@ pytest style **and** are runnable directly with the interpreter:
 
 ```bash
 source .venv/bin/activate
-python tests/unit/test_io_paths.py        # 9 checks — path layer
-python tests/unit/test_logging_setup.py   # 7 checks — logging foundation
+python tests/unit/test_io_paths.py                    # path layer
+python tests/unit/test_logging_setup.py                # logging foundation
+python tests/unit/test_dataset_ingestion.py             # Phase 2 — dataset
+python tests/unit/test_contract_schema.py                # Phase 3 — DatasetContract
+python tests/unit/test_contract_builder.py                # Phase 3 — deterministic builder
+python tests/unit/test_observed_not_enforced.py             # Phase 3 — the central rule
+python tests/unit/test_validator_artifacts.py               # Phase 4 — check family A
+python tests/unit/test_validator_schema.py                   # Phase 4 — check family B
+python tests/unit/test_validator_target.py                    # Phase 4 — check family C
+python tests/unit/test_validator_constraints.py                 # Phase 4 — check family D
+python tests/unit/test_validator_scale_drift.py                  # Phase 4 — check family E ⭐
+python tests/unit/test_validator_integrity.py                     # Phase 4 — check family F
+python tests/unit/test_validator_modeling.py                       # Phase 4 — check family G
+python tests/unit/test_validator_aggregate.py                       # Phase 4 — gate decision rule
+python tests/unit/test_fault_injection.py                            # Phase 4 — demo helpers
+python tests/unit/test_validation_report_rendering.py                 # Phase 4 — report rendering
 ```
 
 Each prints `PASS`/`FAIL` per check and exits non-zero on any failure. Once
@@ -227,13 +252,48 @@ unchanged (`conftest.py` already wires the import paths).
 - [x] No production `Agent` / `Task` / `Crew` / `Flow` written — spike code only,
       marked disposable.
 
+### Done — Phase 2: dataset selection and reproducible ingestion
+
+- [x] **Telco Customer Churn** selected against the Plan's 12 mandatory criteria.
+- [x] `scripts/download_data.py` — reproducible acquisition with SHA256 verification.
+- [x] `data/README.md` — provenance, licensing, schema, and known data-quality issues.
+- [x] Dataset ingestion unit tests.
+
+### Done — Phase 3: Dataset Contract schema
+
+- [x] `contract/schema.py` — the `DatasetContract` Pydantic model, `observed`
+      (measured, never enforced) strictly separated from `constraints`
+      (enforced only when explicitly declared with a justification).
+- [x] `contract/builder.py` — deterministic Python merges a validated
+      `ContractDraft` + real CSV bytes + pandas-measured facts into a
+      `DatasetContract`; every measured number (SHA256, row/column counts,
+      dtypes, statistics) comes from the actual file, never an LLM.
+- [x] `plans/contract_draft.py` + guardrail — the semantic-only draft an
+      agent will produce in Phase 6+; structurally cannot carry a measured value.
+- [x] **`test_observed_not_enforced.py`** proves the central rule: a value
+      above `observed.max` alone is never rejected.
+
+### Done — Phase 4: the deterministic Validation Gate ⭐
+
+- [x] `contract/validator.py` — every check family A–G (artifacts, schema,
+      target, constraints, scale_drift, integrity, modeling), **zero LLM
+      calls**. `passed = (errors == 0)`; the gate runs every applicable check
+      and collects every finding, never stopping at the first failure.
+- [x] `ValidationFinding` / `ValidationReport` (Pydantic) + `render_validation_report_markdown`.
+- [x] Scale-drift detection (§E.3): the mandatory incident reproduction —
+      `monthly_charges × 100`, dtype unchanged — is caught and reported as
+      **"SUSPECTED SCALE CHANGE"**, without ever claiming a specific currency
+      the source dataset never documented.
+- [x] `demo/fault_injection.py` — deterministic mutation helpers (for tests
+      only at this phase; not wired to any CLI flag or Flow yet).
+- [x] `observed.*` remains unenforceable by itself — proven again at the gate
+      layer, not just the contract-representation layer.
+- [x] 10 test files, every check family + aggregate gate behaviour covered.
+
 ### Not started
 
 Everything else. Specifically **not implemented and not working yet**:
 
-- **Dataset** selection / download / documentation (Phase 2).
-- **Dataset contract** schema and builder (Phase 3).
-- **Validation gate** (Phase 4).
 - Deterministic **tools** and the handoff allowlist (Phase 5).
 - **Crew 1** (Data Analyst) and **Crew 2** (Data Scientist) (Phases 6–7).
 - The **Flow** orchestration and failure demo (Phases 8, 10).
