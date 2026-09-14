@@ -25,11 +25,11 @@ import pandas as pd  # noqa: E402
 
 from harbor_vale.contract.validator import run_validation_gate  # noqa: E402
 from harbor_vale.demo import fault_injection as fi  # noqa: E402
-from tests.fixtures.gate_fixtures import CONTRACT_JSON, FIXTURE_CSV  # noqa: E402
+from tests.fixtures.gate_fixtures import CONTRACT_JSON, EDA_REPORT_FIXTURE, FIXTURE_CSV, INSIGHTS_MD_FIXTURE  # noqa: E402
 
 
 def test_a_clean_candidate_passes_with_zero_errors_and_zero_warnings() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="t")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is True
     assert report.errors == 0
     assert report.warnings == 0
@@ -49,7 +49,7 @@ def test_warnings_alone_never_fail_the_gate() -> None:
         from harbor_vale.contract.schema import DatasetContract  # noqa: F401
 
         contract_out = fi.contract_only_change(CONTRACT_JSON, Path(tmp) / "c.json", drop_column="gender")
-        report = run_validation_gate(FIXTURE_CSV, contract_out, run_id="t")
+        report = run_validation_gate(FIXTURE_CSV, contract_out, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.errors == 0
     assert report.warnings > 0
     assert report.passed is True
@@ -58,7 +58,7 @@ def test_warnings_alone_never_fail_the_gate() -> None:
 def test_any_single_error_fails_the_gate_even_with_zero_warnings() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.inject_nulls(FIXTURE_CSV, Path(tmp) / "n.csv", column="contract_type", count=1)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.errors >= 1
     assert report.passed is False
 
@@ -73,7 +73,7 @@ def test_multiple_independent_errors_are_all_collected_in_one_report() -> None:
         df.loc[df.index[2], "internet_service"] = "Satellite"  # closed_domain violation
         out = Path(tmp) / "multi_broken.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
 
     check_ids = {f.check_id for f in report.findings}
     assert "CONSTRAINTS_BUSINESS_RANGE" in check_ids
@@ -87,7 +87,7 @@ def test_multiple_independent_errors_are_all_collected_in_one_report() -> None:
 def test_checks_run_and_finding_counts_agree_with_errors_and_warnings_fields() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.rename_column(FIXTURE_CSV, Path(tmp) / "r.csv", old_name="gender", new_name="sex")
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     actual_errors = sum(1 for f in report.findings if f.severity == "ERROR")
     actual_warnings = sum(1 for f in report.findings if f.severity == "WARN")
     assert report.errors == actual_errors
@@ -97,13 +97,13 @@ def test_checks_run_and_finding_counts_agree_with_errors_and_warnings_fields() -
 
 
 def test_run_id_and_contract_version_are_stamped_on_the_report() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="my-custom-run-id")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="my-custom-run-id")
     assert report.run_id == "my-custom-run-id"
     assert report.contract_version == "1.0.0"
 
 
 def test_fault_injection_defaults_to_none_on_a_real_run() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="t")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.fault_injection is None
 
 

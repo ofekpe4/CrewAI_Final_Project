@@ -26,7 +26,7 @@ import pandas as pd  # noqa: E402
 
 from harbor_vale.contract.validator import run_validation_gate  # noqa: E402
 from harbor_vale.demo import fault_injection as fi  # noqa: E402
-from tests.fixtures.gate_fixtures import CONTRACT_JSON, FIXTURE_CSV  # noqa: E402
+from tests.fixtures.gate_fixtures import CONTRACT_JSON, EDA_REPORT_FIXTURE, FIXTURE_CSV, INSIGHTS_MD_FIXTURE  # noqa: E402
 
 
 def _findings(report, check_id: str):
@@ -55,7 +55,7 @@ def test_detects_hundredfold_scale_change() -> None:
         mutated_df = pd.read_csv(mutated)
         assert str(mutated_df["monthly_charges"].dtype) == "float64", "dtype must be preserved by the mutation"
 
-        report = run_validation_gate(mutated, CONTRACT_JSON, run_id="t", fault_injection="scale_change")
+        report = run_validation_gate(mutated, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t", fault_injection="scale_change")
 
     # 1. the baseline fixture on disk was never touched
     assert FIXTURE_CSV.read_bytes() == original_bytes_before
@@ -93,12 +93,12 @@ def test_fault_injection_marker_is_carried_onto_the_report() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         mutated = fi.scale_change(FIXTURE_CSV, tmp_path / "mutated.csv", column="monthly_charges", factor=100.0)
-        report = run_validation_gate(mutated, CONTRACT_JSON, run_id="t", fault_injection="scale_change")
+        report = run_validation_gate(mutated, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t", fault_injection="scale_change")
     assert report.fault_injection == "scale_change"
 
 
 def test_normal_baseline_passes_with_no_scale_drift_finding() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="t")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is True
     assert not _findings(report, "SCALE_DRIFT_MEDIAN")
 
@@ -111,7 +111,7 @@ def test_ordinary_in_tolerance_drift_passes() -> None:
         df["monthly_charges"] = df["monthly_charges"] * 1.10
         out = Path(tmp) / "mild_drift.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "SCALE_DRIFT_MEDIAN")
 
 
@@ -125,7 +125,7 @@ def test_out_of_tolerance_but_not_a_recognized_hint_ratio_still_errors_generical
         df["monthly_charges"] = df["monthly_charges"] * 3.0
         out = Path(tmp) / "triple.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     hits = _findings(report, "SCALE_DRIFT_MEDIAN")
     assert len(hits) == 1 and hits[0].severity == "ERROR"
     assert "SUSPECTED SCALE CHANGE" not in hits[0].message
@@ -141,7 +141,7 @@ def test_column_with_no_declared_scale_drift_policy_is_never_checked() -> None:
         df["total_charges"] = df["total_charges"] * 1000.0
         out = Path(tmp) / "shifted.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not any(f.column == "total_charges" for f in _findings(report, "SCALE_DRIFT_MEDIAN"))
 
 
@@ -166,7 +166,7 @@ def test_zero_snapshot_median_is_handled_without_dividing_by_zero() -> None:
 
         # Should not raise, and should not report a scale_drift finding for
         # monthly_charges (the ratio is undefined when the snapshot is 0).
-        report = run_validation_gate(FIXTURE_CSV, zeroed, run_id="t")
+        report = run_validation_gate(FIXTURE_CSV, zeroed, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not any(f.column == "monthly_charges" for f in _findings(report, "SCALE_DRIFT_MEDIAN"))
 
 

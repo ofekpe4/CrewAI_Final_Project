@@ -18,11 +18,11 @@ for _p in (str(_ROOT), str(_ROOT / "src")):
 
 from harbor_vale.contract.validator import render_validation_report_markdown, run_validation_gate  # noqa: E402
 from harbor_vale.demo import fault_injection as fi  # noqa: E402
-from tests.fixtures.gate_fixtures import CONTRACT_JSON, FIXTURE_CSV  # noqa: E402
+from tests.fixtures.gate_fixtures import CONTRACT_JSON, EDA_REPORT_FIXTURE, FIXTURE_CSV, INSIGHTS_MD_FIXTURE  # noqa: E402
 
 
 def test_passing_report_renders_pass_and_no_findings_note() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="render-pass")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="render-pass")
     text = render_validation_report_markdown(report)
     assert "VALIDATION PASSED" in text
     assert "render-pass" in text
@@ -33,7 +33,7 @@ def test_passing_report_renders_pass_and_no_findings_note() -> None:
 def test_failing_report_renders_every_required_element() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         mutated = fi.scale_change(FIXTURE_CSV, Path(tmp) / "m.csv", column="monthly_charges", factor=100.0)
-        report = run_validation_gate(mutated, CONTRACT_JSON, run_id="render-fail", fault_injection="scale_change")
+        report = run_validation_gate(mutated, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="render-fail", fault_injection="scale_change")
     text = render_validation_report_markdown(report)
 
     assert "VALIDATION FAILED" in text

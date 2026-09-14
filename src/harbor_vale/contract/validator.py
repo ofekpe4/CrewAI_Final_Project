@@ -40,6 +40,10 @@ integration tests are expected to assert against these exact strings.
 | `ARTIFACTS_CSV_FILE_EXISTS` | artifacts | `clean_data.csv` (or the candidate CSV path given) exists |
 | `ARTIFACTS_CSV_FILE_NOT_EMPTY` | artifacts | it has non-zero byte size |
 | `ARTIFACTS_CSV_LOADS` | artifacts | `pandas.read_csv` succeeds on it |
+| `ARTIFACTS_EDA_REPORT_EXISTS` | artifacts | `eda_report.html` exists on disk (existence/size ONLY — content never read) |
+| `ARTIFACTS_EDA_REPORT_NOT_EMPTY` | artifacts | it has non-zero byte size |
+| `ARTIFACTS_INSIGHTS_MD_EXISTS` | artifacts | `insights.md` exists on disk (existence/size ONLY — content never read) |
+| `ARTIFACTS_INSIGHTS_MD_NOT_EMPTY` | artifacts | it has non-zero byte size |
 | `SCHEMA_MISSING_COLUMN` | schema | a contract-declared (non-target) column is absent from the CSV |
 | `SCHEMA_UNKNOWN_COLUMN` | schema | a CSV column the contract never declared |
 | `SCHEMA_COLUMN_ORDER` | schema | the CSV's column order differs from `integrity.column_order` |
@@ -71,6 +75,28 @@ check it can attempt, never stopping at the first artifact failure), and
 proceed to B–G. This is a structural prerequisite, not the gate "stopping at
 the first failure" — within every family that *does* run, every applicable
 check still runs and every finding is still collected.
+
+## The four Crew 1 artifacts, and the Crew 2 boundary (§F.1, §G.0)
+
+§F.1 Family A requires all **four** Crew 1 artifacts present/non-empty —
+`clean_data.csv`, `dataset_contract.json`, `eda_report.html`, `insights.md` —
+not just the two the gate parses and validates semantically. `run_validation_gate`
+therefore takes all four as explicit paths; the caller (eventually a Flow,
+§H, not built yet) is expected to pass `io_paths.EDA_REPORT_HTML` /
+`io_paths.INSIGHTS_MD` alongside the handoff pair.
+
+**This does not widen the Crew 1 → Crew 2 handoff boundary (§G.0).** The two
+narrative artifacts get **existence + non-empty size checks only** — their
+*content* is never opened, parsed, or read into anything this module
+returns (`ValidationFinding`/`ValidationReport` never carry their bytes or
+text). The validation gate is Flow-layer Python, not Crew 2's tool surface —
+it runs *between* Crew 1 and Crew 2, and already necessarily has filesystem
+access to everything Crew 1 produced (it has to, to check the four artifacts
+exist at all). The boundary this module must never cross is a different
+one: handing Crew 2's own tools (Phase 5's `access/allowlist.py` /
+`access/handoff.py`, not built yet) a path to `eda_report.html` or
+`insights.md` — which nothing here does, has ever done, or takes as an
+input to anything but these four `ARTIFACTS_*` checks.
 """
 
 from __future__ import annotations
@@ -268,8 +294,40 @@ def _positive_rate(target_series: "pd.Series", target_contract) -> float:  # noq
 # ---------------------------------------------------------------------------
 
 
+def _check_presence_only(
+    rpt: _Collector, path: Path, *, exists_check_id: str, not_empty_check_id: str, label: str
+) -> None:
+    """Existence + non-empty-size check for a narrative artifact whose
+    *content* this module has no business reading (`eda_report.html`,
+    `insights.md` — §F.1 Family A requires all four Crew 1 artifacts
+    present/non-empty; it never says these two get parsed or semantically
+    validated, unlike the CSV/contract pair). Never opens the file beyond a
+    `stat()`-equivalent size check — no HTML/Markdown parsing, ever.
+    """
+    if not path.is_file():
+        rpt.record(
+            False, check_id=exists_check_id, check_family="artifacts",
+            message=f"{label} not found: {path}",
+            expected="file exists", observed="missing",
+        )
+        return
+    rpt.record(True, check_id=exists_check_id, check_family="artifacts")
+    if path.stat().st_size == 0:
+        rpt.record(
+            False, check_id=not_empty_check_id, check_family="artifacts",
+            message=f"{label} is empty: {path}",
+            expected="non-zero byte size", observed=0,
+        )
+    else:
+        rpt.record(True, check_id=not_empty_check_id, check_family="artifacts")
+
+
 def _check_artifacts(
-    rpt: _Collector, csv_path: Path, contract_path: Path
+    rpt: _Collector,
+    csv_path: Path,
+    contract_path: Path,
+    eda_report_html_path: Path,
+    insights_md_path: Path,
 ) -> tuple["pd.DataFrame | None", DatasetContract | None, str | None]:
     """Returns `(df, contract, candidate_sha256)`, any of which may be `None`
     if its own artifact family checks failed. `candidate_sha256` is computed
@@ -277,6 +335,10 @@ def _check_artifacts(
     non-empty — independent of whether `pandas.read_csv` later succeeds —
     because family F (integrity) must hash the **actual transferred file
     bytes**, never an in-memory re-serialization (§F.1 note).
+
+    `eda_report_html_path`/`insights_md_path` get presence-only checks
+    (`_check_presence_only`) — see the module docstring's "Crew 2 boundary"
+    note for why this does not widen what Crew 2 may access.
     """
     df: "pd.DataFrame | None" = None
     contract: DatasetContract | None = None
@@ -351,6 +413,20 @@ def _check_artifacts(
                 df = None
             else:
                 rpt.record(True, check_id="ARTIFACTS_CSV_LOADS", check_family="artifacts")
+
+    # --- narrative artifacts (presence/size only — never parsed) ---
+    _check_presence_only(
+        rpt, eda_report_html_path,
+        exists_check_id="ARTIFACTS_EDA_REPORT_EXISTS",
+        not_empty_check_id="ARTIFACTS_EDA_REPORT_NOT_EMPTY",
+        label="eda_report.html",
+    )
+    _check_presence_only(
+        rpt, insights_md_path,
+        exists_check_id="ARTIFACTS_INSIGHTS_MD_EXISTS",
+        not_empty_check_id="ARTIFACTS_INSIGHTS_MD_NOT_EMPTY",
+        label="insights.md",
+    )
 
     return df, contract, candidate_sha256
 
@@ -745,11 +821,15 @@ def _check_modeling(rpt: _Collector, df: "pd.DataFrame", contract: DatasetContra
 def run_validation_gate(
     candidate_csv_path: Path | str,
     contract_json_path: Path | str,
+    eda_report_html_path: Path | str,
+    insights_md_path: Path | str,
     *,
     run_id: str,
     fault_injection: str | None = None,
 ) -> ValidationReport:
-    """Validate one candidate `clean_data.csv` against one `dataset_contract.json`.
+    """Validate one candidate `clean_data.csv` against one `dataset_contract.json`
+    — and confirm all **four** required Crew 1 artifacts are present/non-empty
+    (§F.1 Family A; §G.0 for why the latter two do not widen Crew 2's access).
 
     Zero LLM calls. `passed = (errors == 0)`; every applicable check across
     every family is run and every finding collected — the gate never stops
@@ -761,6 +841,14 @@ def run_validation_gate(
         candidate_csv_path: the CSV being validated (a fixture in tests
             today; `artifacts/crew1/clean_data.csv` once Phase 5+/6+ exist).
         contract_json_path: the `DatasetContract` JSON to validate against.
+        eda_report_html_path: path to the EDA & Insights Analyst's HTML
+            report (`artifacts/crew1/eda_report.html` in production, once
+            Phase 6+ exists). Existence/non-empty size checked ONLY — its
+            content is never opened, parsed, or returned by this function;
+            see the module docstring's "Crew 2 boundary" note.
+        insights_md_path: path to the narrative insights file
+            (`artifacts/crew1/insights.md` in production). Same
+            existence/non-empty-only treatment as `eda_report_html_path`.
         run_id: caller-supplied run identifier, stamped onto the report.
             This module deliberately does not invent one — a `Flow` (future
             phase) is the natural owner of run identity, not the gate.
@@ -776,9 +864,11 @@ def run_validation_gate(
     """
     csv_path = Path(candidate_csv_path)
     contract_path = Path(contract_json_path)
+    eda_path = Path(eda_report_html_path)
+    insights_path = Path(insights_md_path)
     rpt = _Collector()
 
-    df, contract, candidate_sha256 = _check_artifacts(rpt, csv_path, contract_path)
+    df, contract, candidate_sha256 = _check_artifacts(rpt, csv_path, contract_path, eda_path, insights_path)
 
     if df is not None and contract is not None:
         _check_schema(rpt, df, contract)

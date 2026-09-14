@@ -25,7 +25,7 @@ import pandas as pd  # noqa: E402
 
 from harbor_vale.contract.validator import _MIN_ROWS_FOR_MODELING, run_validation_gate  # noqa: E402
 from harbor_vale.demo import fault_injection as fi  # noqa: E402
-from tests.fixtures.gate_fixtures import CONTRACT_JSON, FIXTURE_CSV  # noqa: E402
+from tests.fixtures.gate_fixtures import CONTRACT_JSON, EDA_REPORT_FIXTURE, FIXTURE_CSV, INSIGHTS_MD_FIXTURE  # noqa: E402
 
 
 def _findings(report, check_id: str):
@@ -36,14 +36,14 @@ def test_too_few_rows_is_an_error() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         keep = _MIN_ROWS_FOR_MODELING - 5
         out = fi.truncate_dataset(FIXTURE_CSV, Path(tmp) / "short.csv", keep_rows=keep)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "MODELING_MIN_ROWS")
     assert len(hits) == 1 and hits[0].severity == "ERROR" and hits[0].observed == keep
 
 
 def test_sufficient_rows_produces_no_finding() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="t")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "MODELING_MIN_ROWS")
 
 
@@ -54,14 +54,14 @@ def test_constant_required_feature_is_a_warning() -> None:
         df["internet_service"] = "DSL"
         out = Path(tmp) / "constant.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     hits = _findings(report, "MODELING_CONSTANT_REQUIRED_FEATURE")
     assert len(hits) == 1 and hits[0].column == "internet_service" and hits[0].severity == "WARN"
     assert not any(f.severity == "ERROR" for f in hits)
 
 
 def test_non_constant_required_features_produce_no_finding() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="t")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "MODELING_CONSTANT_REQUIRED_FEATURE")
 
 
@@ -72,7 +72,7 @@ def test_truncated_dataset_below_the_row_floor_still_reports_every_other_family(
     integrity ERROR from the changed bytes)."""
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.truncate_dataset(FIXTURE_CSV, Path(tmp) / "short.csv", keep_rows=5)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     assert _findings(report, "MODELING_MIN_ROWS")
     assert _findings(report, "INTEGRITY_SHA256_MATCH")
