@@ -1,0 +1,31 @@
+customer_id,gender,senior_citizen,partner,dependents,tenure_months,phone_service,multiple_lines,internet_service,online_security,online_backup,device_protection,tech_support,streaming_tv,streaming_movies,contract_type,paperless_billing,payment_method,monthly_charges,total_charges,churn
+1000-AAAAA,Male,0,Yes,No,68,Yes,No,DSL,No,No,No,No,Yes,No,Month-to-month,No,Credit card (automatic),111.19,7505.23,0
+1001-BDHFC,Female,0,No,No,11,Yes,Yes,No,No internet service,No internet service,No internet service,No internet service,No internet service,No internet service,Two year,Yes,Bank transfer (automatic),20.75,229.81,0
+1002-CGOKE,Female,0,No,No,36,Yes,Yes,Fiber optic,No,Yes,Yes,No,Yes,No,Two year,Yes,Credit card (automatic),74.05,2688.98,0
+1003-DJVPG,Male,0,Yes,No,50,Yes,No,Fiber optic,Yes,Yes,No,Yes,Yes,Yes,Month-to-month,No,Bank transfer (automatic),81.96,4078.48,0
+1004-EMCUI,Male,0,No,No,36,No,No phone service,DSL,No,Yes,Yes,Yes,No,Yes,Two year,No,Mailed check,28.89,1049.85,0
+1005-FPJZK,Female,0,Yes,No,32,Yes,No,Fiber optic,No,No,Yes,No,Yes,No,Month-to-month,No,Electronic check,32.35,1035.2,1
+1006-GSQEM,Male,0,Yes,No,12,Yes,No,Fiber optic,No,No,No,Yes,Yes,Yes,Month-to-month,Yes,Credit card (automatic),60.37,765.21,1
+1007-HVXJO,Female,1,No,No,27,Yes,Yes,No,No internet service,No internet service,No internet service,No internet service,No internet service,No internet service,Month-to-month,Yes,Credit card (automatic),115.36,3212.73,1
+1008-IYEOQ,Male,1,No,Yes,17,Yes,Yes,Fiber optic,No,Yes,Yes,Yes,Yes,Yes,Two year,Yes,Electronic check,78.15,1335.49,0
+1009-JBLTS,Male,0,Yes,No,22,Yes,No,Fiber optic,Yes,Yes,No,Yes,Yes,Yes,Month-to-month,Yes,Bank transfer (automatic),112.02,2378.45,1
+1010-KESYU,Female,0,No,Yes,49,Yes,No,DSL,No,No,No,No,Yes,No,Month-to-month,No,Electronic check,99.09,4809.62,0
+1011-LHZDW,Female,0,Yes,No,46,Yes,No,DSL,No,No,No,No,No,No,Month-to-month,No,Bank transfer (automatic),65.22,2985.0,0
+1012-MKGIY,Female,0,No,No,44,Yes,Yes,Fiber optic,Yes,No,No,No,No,Yes,Two year,Yes,Credit card (automatic),97.12,4253.04,0
+1013-NNNNA,Female,0,Yes,Yes,26,Yes,No,Fiber optic,No,Yes,Yes,Yes,Yes,Yes,Two year,No,Electronic check,20.04,524.46,0
+1014-OQUSC,Female,0,No,Yes,70,Yes,Yes,DSL,No,Yes,Yes,Yes,No,Yes,One year,Yes,Mailed check,29.22,2031.96,0
+1015-PTBXE,Female,0,No,Yes,6,Yes,Yes,No,No internet service,No internet service,No internet service,No internet service,No internet service,No internet service,Two year,No,Electronic check,101.61,596.82,0
+1016-QWICG,Female,1,No,Yes,25,Yes,Yes,No,No internet service,No internet service,No internet service,No internet service,No internet service,No internet service,Two year,Yes,Bank transfer (automatic),98.33,2441.81,0
+1017-RZPHI,Male,0,No,No,8,Yes,No,DSL,No,No,No,No,Yes,No,Month-to-month,Yes,Credit card (automatic),41.63,335.96,1
+1018-SCWMK,Female,0,Yes,No,24,Yes,Yes,Fiber optic,No,No,Yes,No,Yes,No,Month-to-month,No,Electronic check,71.59,1707.97,1
+1019-TFDRM,Male,0,No,No,70,Yes,No,DSL,No,Yes,Yes,Yes,No,Yes,Two year,Yes,Mailed check,79.15,5627.19,0
+1020-UIKWO,Female,0,Yes,No,26,Yes,Yes,Fiber optic,No,No,No,Yes,No,No,One year,Yes,Credit card (automatic),105.46,2783.14,0
+1021-VLRBQ,Male,0,No,No,66,Yes,No,DSL,No,No,Yes,No,No,No,Month-to-month,Yes,Mailed check,78.86,5082.76,0
+1022-WOYGS,Male,0,No,No,36,Yes,Yes,Fiber optic,Yes,No,Yes,No,Yes,No,Month-to-month,Yes,Electronic check,59.71,2119.51,1
+1023-XRFLU,Female,0,Yes,Yes,51,Yes,No,Fiber optic,No,Yes,Yes,No,No,Yes,One year,Yes,Mailed check,55.86,2866.64,0
+1024-YUMQW,Female,0,No,Yes,33,Yes,Yes,Fiber optic,Yes,No,Yes,No,Yes,Yes,Month-to-month,Yes,Bank transfer (automatic),61.05,2026.91,1
+1025-ZXTVY,Female,0,No,Yes,19,Yes,No,DSL,No,No,No,No,Yes,Yes,Two year,No,Bank transfer (automatic),83.77,1572.81,0
+1026-AAAAA,Male,0,Yes,No,55,No,No phone service,No,No internet service,No internet service,No internet service,No internet service,No internet service,No internet service,Month-to-month,No,Mailed check,105.43,5867.18,0
+1027-BDHFC,Female,0,Yes,No,70,Yes,No,DSL,No,Yes,No,Yes,Yes,No,Month-to-month,Yes,Credit card (automatic),63.87,4546.6,0
+1028-CGOKE,Female,0,Yes,Yes,19,Yes,No,DSL,No,Yes,No,No,Yes,No,Two year,Yes,Bank transfer (automatic),43.16,823.88,0
+1029-DJVPG,Male,0,Yes,No,56,Yes,No,Fiber optic,No,Yes,No,Yes,No,Yes,Month-to-month,No,Mailed check,42.03,2346.5,0
