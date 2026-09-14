@@ -269,6 +269,42 @@ See §2 "Conditions that trigger a later fallback to Pattern B" — primarily a
 
 ---
 
+## Addendum (Phase 3) — the exact guardrail return annotation CrewAI requires
+
+Discovered wiring `harbor_vale.plans.contract_draft.validate_contract_draft` into
+a real `Task(guardrail=...)` against the pinned `crewai==1.15.20`, refining §5/§14.10
+above (not a contradiction — an added precision the Phase 1 spike did not need,
+since its guardrails were untyped or returned `tuple[bool, Any]` and were never
+constructed as a real `Task`).
+
+Avoiding `from __future__ import annotations` is **necessary but not sufficient**.
+CrewAI's own `Task.guardrail` field validator inspects the function's return
+annotation and requires it to be **exactly** `typing.Tuple[bool, typing.Any]` —
+the legacy `typing.Tuple`/`typing.Any` spelling. The modern PEP 585/604
+equivalent fails at `Task(...)` construction:
+
+```python
+def fn(output) -> tuple[bool, object]: ...
+Task(guardrail=fn)
+# pydantic_core.ValidationError: 1 validation error for Task
+# guardrail
+#   Value error, If return type is annotated, it must be Tuple[bool, Any]
+```
+
+```python
+from typing import Any, Tuple
+def fn(output) -> Tuple[bool, Any]: ...
+Task(guardrail=fn)  # constructs cleanly
+```
+
+**Production rule (addendum to §14):** every Harbor & Vale guardrail function
+must be annotated `-> Tuple[bool, Any]` using `from typing import Any, Tuple`
+(not `tuple[bool, Any]`, not `tuple[bool, object]`), in a module that does not
+import `from __future__ import annotations`. Verified against `crewai==1.15.20`
+in `src/harbor_vale/plans/contract_draft.py`.
+
+---
+
 ## Spike status
 
 The Phase 1 spike files `spike/task_1_1_output_pydantic.py` …

@@ -1,0 +1,948 @@
+{
+  "contract_version": "1.0.0",
+  "created_at": "2026-09-14T08:42:43Z",
+  "created_by": "tests.fixtures.build_example_contract",
+  "run_id": "example-fixture-run",
+  "dataset_name": "telco_customer_churn",
+  "source_documentation_url": "https://github.com/IBM/telco-customer-churn-on-icp4d",
+  "target": {
+    "name": "churn",
+    "task_type": "binary_classification",
+    "constraints": {
+      "dtype": {
+        "expected": "int64",
+        "justification": "binary label by construction"
+      },
+      "closed_domain": {
+        "values": [
+          "0",
+          "1"
+        ],
+        "justification": "binary label by construction",
+        "severity": "ERROR"
+      },
+      "nullable": {
+        "value": false,
+        "justification": "a row without a label is unusable for training"
+      }
+    },
+    "observed": {
+      "positive_rate": 0.26666666666666666,
+      "class_counts": {
+        "0": 22,
+        "1": 8
+      }
+    },
+    "drift": null
+  },
+  "required_features": [
+    "tenure_months",
+    "monthly_charges",
+    "contract_type",
+    "internet_service"
+  ],
+  "excluded_features": [
+    {
+      "name": "customer_id",
+      "exclusion_type": "identifier",
+      "enforcement": "hard",
+      "justification": "a unique key carries no generalizable signal"
+    },
+    {
+      "name": "total_charges",
+      "exclusion_type": "redundancy_collinearity",
+      "enforcement": "advisory",
+      "justification": "approximately tenure_months x monthly_charges (r=0.9996 on the real Phase 2 dataset, data/README.md \u00a76.3). It IS available at prediction time, so this is NOT leakage \u2014 it is redundancy. The Feature Engineer may include it with justification."
+    }
+  ],
+  "primary_key": {
+    "columns": [
+      "customer_id"
+    ],
+    "constraints": {
+      "unique": {
+        "value": true,
+        "justification": "one row per customer"
+      }
+    }
+  },
+  "columns": [
+    {
+      "name": "customer_id",
+      "semantic_type": "identifier",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 30,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "1000-AAAAA": 0.03333333333333333,
+          "1001-BDHFC": 0.03333333333333333,
+          "1002-CGOKE": 0.03333333333333333,
+          "1003-DJVPG": 0.03333333333333333,
+          "1004-EMCUI": 0.03333333333333333,
+          "1005-FPJZK": 0.03333333333333333,
+          "1006-GSQEM": 0.03333333333333333,
+          "1007-HVXJO": 0.03333333333333333,
+          "1008-IYEOQ": 0.03333333333333333,
+          "1009-JBLTS": 0.03333333333333333,
+          "1010-KESYU": 0.03333333333333333,
+          "1011-LHZDW": 0.03333333333333333,
+          "1012-MKGIY": 0.03333333333333333,
+          "1013-NNNNA": 0.03333333333333333,
+          "1014-OQUSC": 0.03333333333333333,
+          "1015-PTBXE": 0.03333333333333333,
+          "1016-QWICG": 0.03333333333333333,
+          "1017-RZPHI": 0.03333333333333333,
+          "1018-SCWMK": 0.03333333333333333,
+          "1019-TFDRM": 0.03333333333333333,
+          "1020-UIKWO": 0.03333333333333333,
+          "1021-VLRBQ": 0.03333333333333333,
+          "1022-WOYGS": 0.03333333333333333,
+          "1023-XRFLU": 0.03333333333333333,
+          "1024-YUMQW": 0.03333333333333333,
+          "1025-ZXTVY": 0.03333333333333333,
+          "1026-AAAAA": 0.03333333333333333,
+          "1027-BDHFC": 0.03333333333333333,
+          "1028-CGOKE": 0.03333333333333333,
+          "1029-DJVPG": 0.03333333333333333
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every row must identify a customer"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": null,
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "gender",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Female": 0.6,
+          "Male": 0.4
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account records a gender"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Male",
+            "Female"
+          ],
+          "justification": "the source represents gender as exactly these two values",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "senior_citizen",
+      "semantic_type": "binary",
+      "observed": {
+        "dtype": "int64",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.1,
+        "median": 0.0,
+        "p05": 0.0,
+        "p95": 1.0,
+        "std": 0.30512857662936466,
+        "decimal_places_max": 0,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "int64",
+          "justification": "source encodes this flag as 0/1, not Yes/No"
+        },
+        "nullable": {
+          "value": false,
+          "justification": "every account states this demographic flag"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "0",
+            "1"
+          ],
+          "justification": "binary flag by construction",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "partner",
+      "semantic_type": "binary",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.5333333333333333,
+          "Yes": 0.4666666666666667
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has an explicit yes/no value for this attribute"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No"
+          ],
+          "justification": "the source represents this attribute as a binary yes/no flag",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "dependents",
+      "semantic_type": "binary",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.6666666666666666,
+          "Yes": 0.3333333333333333
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has an explicit yes/no value for this attribute"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No"
+          ],
+          "justification": "the source represents this attribute as a binary yes/no flag",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "tenure_months",
+      "semantic_type": "numeric",
+      "observed": {
+        "dtype": "int64",
+        "null_count": 0,
+        "unique_count": 24,
+        "min": 6.0,
+        "max": 70.0,
+        "mean": 37.0,
+        "median": 34.5,
+        "p05": 9.350000000000001,
+        "p95": 70.0,
+        "std": 19.885881319722014,
+        "decimal_places_max": 0,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "int64",
+          "justification": "a whole number of months"
+        },
+        "nullable": {
+          "value": false,
+          "justification": "every account has a tenure, including 0 for brand-new customers"
+        },
+        "unit": {
+          "value": "months",
+          "evidence": "IBM Community documentation states this column is 'Tenure in Months' (data/README.md \u00a76.1)",
+          "confidence": "high"
+        },
+        "business_range": {
+          "min": 0.0,
+          "max": null,
+          "justification": "tenure cannot be negative; no defensible upper bound exists as the business relationship continues"
+        },
+        "closed_domain": null,
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "phone_service",
+      "semantic_type": "binary",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Yes": 0.9333333333333333,
+          "No": 0.06666666666666667
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has an explicit yes/no value for this attribute"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No"
+          ],
+          "justification": "the source represents this attribute as a binary yes/no flag",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "multiple_lines",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.5333333333333333,
+          "Yes": 0.4,
+          "No phone service": 0.06666666666666667
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a value for this attribute"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No phone service"
+          ],
+          "justification": "depends structurally on phone_service; the provider's catalogue defines exactly these three states",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "internet_service",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Fiber optic": 0.4666666666666667,
+          "DSL": 0.36666666666666664,
+          "No": 0.16666666666666666
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has an internet service state"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "DSL",
+            "Fiber optic",
+            "No"
+          ],
+          "justification": "the provider offers exactly these three internet service tiers",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "online_security",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.6666666666666666,
+          "No internet service": 0.16666666666666666,
+          "Yes": 0.16666666666666666
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a value for this add-on, even if structurally N/A"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "the provider's catalogue defines exactly these three states for an add-on that depends on internet service; a new value would mean the product catalogue changed",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "online_backup",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.43333333333333335,
+          "Yes": 0.4,
+          "No internet service": 0.16666666666666666
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a value for this add-on, even if structurally N/A"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "the provider's catalogue defines exactly these three states for an add-on that depends on internet service; a new value would mean the product catalogue changed",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "device_protection",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.43333333333333335,
+          "Yes": 0.4,
+          "No internet service": 0.16666666666666666
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a value for this add-on, even if structurally N/A"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "the provider's catalogue defines exactly these three states for an add-on that depends on internet service; a new value would mean the product catalogue changed",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "tech_support",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.4666666666666667,
+          "Yes": 0.36666666666666664,
+          "No internet service": 0.16666666666666666
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a value for this add-on, even if structurally N/A"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "the provider's catalogue defines exactly these three states for an add-on that depends on internet service; a new value would mean the product catalogue changed",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "streaming_tv",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Yes": 0.5333333333333333,
+          "No": 0.3,
+          "No internet service": 0.16666666666666666
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a value for this add-on, even if structurally N/A"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "the provider's catalogue defines exactly these three states for an add-on that depends on internet service; a new value would mean the product catalogue changed",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "streaming_movies",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Yes": 0.43333333333333335,
+          "No": 0.4,
+          "No internet service": 0.16666666666666666
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a value for this add-on, even if structurally N/A"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "the provider's catalogue defines exactly these three states for an add-on that depends on internet service; a new value would mean the product catalogue changed",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "contract_type",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Month-to-month": 0.5333333333333333,
+          "Two year": 0.36666666666666664,
+          "One year": 0.1
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a contract type"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Month-to-month",
+            "One year",
+            "Two year"
+          ],
+          "justification": "the provider offers exactly these three contract terms; a new value means the product catalogue changed",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "paperless_billing",
+      "semantic_type": "binary",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Yes": 0.6,
+          "No": 0.4
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has an explicit yes/no value for this attribute"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No"
+          ],
+          "justification": "the source represents this attribute as a binary yes/no flag",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "payment_method",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 4,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Credit card (automatic)": 0.26666666666666666,
+          "Bank transfer (automatic)": 0.26666666666666666,
+          "Mailed check": 0.23333333333333334,
+          "Electronic check": 0.23333333333333334
+        }
+      },
+      "constraints": {
+        "dtype": null,
+        "nullable": {
+          "value": false,
+          "justification": "every account has a payment method on file"
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Electronic check",
+            "Mailed check",
+            "Bank transfer (automatic)",
+            "Credit card (automatic)"
+          ],
+          "justification": "the provider supports exactly these four payment channels",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "monthly_charges",
+      "semantic_type": "monetary",
+      "observed": {
+        "dtype": "float64",
+        "null_count": 0,
+        "unique_count": 30,
+        "min": 20.04,
+        "max": 115.36,
+        "mean": 70.57633333333334,
+        "median": 72.82,
+        "p05": 24.413,
+        "p95": 111.64649999999999,
+        "std": 29.080785157940607,
+        "decimal_places_max": 2,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "float64",
+          "justification": "continuous monetary-like amount"
+        },
+        "nullable": {
+          "value": false,
+          "justification": "every active account has a recurring charge"
+        },
+        "unit": {
+          "value": "currency_unspecified",
+          "evidence": "the source documentation does not state a currency (data/README.md \u00a76.2)",
+          "confidence": "low"
+        },
+        "business_range": {
+          "min": 0.0,
+          "max": null,
+          "justification": "a recurring charge cannot be negative; no defensible upper bound exists \u2014 a future premium plan may legitimately exceed the observed maximum"
+        },
+        "closed_domain": null,
+        "scale_drift": {
+          "median_rel_tolerance": 0.25,
+          "justification": "this column is scale-sensitive; a large shift in central tendency indicates a unit or scale change rather than natural variation",
+          "severity": "ERROR"
+        }
+      }
+    },
+    {
+      "name": "total_charges",
+      "semantic_type": "monetary",
+      "observed": {
+        "dtype": "float64",
+        "null_count": 0,
+        "unique_count": 30,
+        "min": 229.81,
+        "max": 7505.23,
+        "mean": 2654.3063333333334,
+        "median": 2362.475,
+        "p05": 420.785,
+        "p95": 5759.184499999999,
+        "std": 1848.6588048048898,
+        "decimal_places_max": 2,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "float64",
+          "justification": "continuous cumulative monetary amount"
+        },
+        "nullable": {
+          "value": false,
+          "justification": "every account has an accumulated total, 0 for brand-new customers"
+        },
+        "unit": {
+          "value": "currency_unspecified",
+          "evidence": "same undocumented-currency source as monthly_charges (data/README.md \u00a76.2)",
+          "confidence": "low"
+        },
+        "business_range": {
+          "min": 0.0,
+          "max": null,
+          "justification": "cumulative billing cannot be negative; no upper bound is defensible"
+        },
+        "closed_domain": null,
+        "scale_drift": null
+      }
+    }
+  ],
+  "integrity": {
+    "clean_data_sha256": "df43a873700c6b99c214ac6f1d1d6e2d47925588bbc2c22e3f2e0b6c96e65d26",
+    "row_count": 30,
+    "column_count": 21,
+    "column_order": [
+      "customer_id",
+      "gender",
+      "senior_citizen",
+      "partner",
+      "dependents",
+      "tenure_months",
+      "phone_service",
+      "multiple_lines",
+      "internet_service",
+      "online_security",
+      "online_backup",
+      "device_protection",
+      "tech_support",
+      "streaming_tv",
+      "streaming_movies",
+      "contract_type",
+      "paperless_billing",
+      "payment_method",
+      "monthly_charges",
+      "total_charges",
+      "churn"
+    ]
+  },
+  "assumptions": [
+    "one row per customer; customer_id is unique",
+    "the currency of monetary columns is NOT documented in the source; only relative scale is contracted",
+    "churn refers to the observation snapshot; no future information is encoded",
+    "total_charges is a redundant, non-leakage snapshot feature (data/README.md \u00a76.3)"
+  ],
+  "validation_policy": {
+    "on_unknown_column": "warn",
+    "on_missing_column": "error",
+    "on_integrity_mismatch": "error",
+    "scale_change_ratio_hints": [
+      0.001,
+      0.01,
+      0.1,
+      10.0,
+      100.0,
+      1000.0
+    ]
+  }
+}
