@@ -338,6 +338,46 @@ guardrail module. `src/harbor_vale/plans/contract_draft.py` already uses
 remains valid but was never actually *required*; no code change follows
 from this correction. Verified against `crewai==1.15.20`.
 
+## Addendum (Phase 5) — `Task.guardrail` only counts REQUIRED parameters
+
+The Sessions 17–18 guardrail-annotation rule covers the *return*
+annotation. Phase 5 needed several guardrails that also take *context*
+(`validate_cleaning_plan(output, *, profile=...)`,
+`validate_feature_plan(output, *, contract=...)`, etc.) — cross-validating
+an agent's plan against a real `DatasetProfile`/`DatasetContract` a bare
+`output`-only signature cannot carry. Constructing one of these directly as
+`Task(guardrail=fn)` first failed:
+
+```
+pydantic_core._pydantic_core.ValidationError: 1 validation error for Task
+guardrail
+  Value error, Guardrail function must accept exactly one parameter
+```
+
+**Verified empirically against `crewai==1.15.20`:** this check counts only
+parameters **without a default** — a keyword parameter carrying any default
+value (including `None`) does not count against the limit, regardless of
+how many such optional parameters exist:
+
+```python
+def g(output, *, a: int = 1, b: str = "x") -> Tuple[bool, Any]: ...
+Task(description="d", expected_output="e", guardrail=g)   # constructs fine
+
+def g2(output, ctx) -> Tuple[bool, Any]: ...               # ctx has no default
+Task(description="d", expected_output="e", guardrail=g2)   # raises the error above
+```
+
+**Production rule this project now follows:** every `plans/*.py` guardrail
+that needs external context gives that parameter a default of `None` and
+returns `(False, "no <thing> supplied — this is a caller wiring error, not
+a plan defect")` if it is ever actually called with `None` — never raises.
+A real caller (Phase 6+) wraps the function in a one-argument closure per
+`Task` instance that supplies the real context, e.g.
+`lambda output: validate_cleaning_plan(output, profile=this_run_profile)`.
+See `src/harbor_vale/plans/cleaning_plan.py`, `insights_doc.py`,
+`feature_plan.py` for the pattern in place; `experiment_plan.py`'s
+`task_type` parameter already had a meaningful default and needed no change.
+
 ---
 
 ## Spike status
