@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ dataset_name }} — EDA Report</title>
+<style>{% include "styles.css" %}</style>
+</head>
+<body>
+<h1>{{ dataset_name }} — Exploratory Data Analysis</h1>
+
+{% if degraded %}
+<div class="degraded-banner">
+  ⚠️ Narrative unavailable — the analyst agent's output failed schema validation after 2 retries.
+  {% if degraded_reason %}<br>Reason: {{ degraded_reason }}{% endif %}
+</div>
+{% elif insights %}
+<p class="headline">{{ insights.headline }}</p>
+{% endif %}
+
+<h2>Measured statistics</h2>
+<table class="stats-table">
+<thead><tr><th>Key</th><th>Value</th></tr></thead>
+<tbody>
+{% for key, value in stats.items() %}
+<tr><td>{{ key }}</td><td>{{ value }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% if figures %}
+<h2>Figures</h2>
+<div class="figures">
+{% for figure in figures %}
+<img src="{{ figure }}" alt="{{ figure }}">
+{% endfor %}
+</div>
+{% endif %}
+
+{% if insights %}
+<h2>Insights</h2>
+{% for insight in insights.insights %}
+<div class="insight-card">
+  <h3>{{ insight.title }}</h3>
+  <p>{{ insight.observation }}</p>
+  <p><strong>Business implication:</strong> {{ insight.business_implication }}</p>
+  <p><strong>Recommended action:</strong> {{ insight.recommended_action }}</p>
+  <p class="evidence-key">evidence: {{ insight.evidence_stat_key }}</p>
+</div>
+{% endfor %}
+
+{% if insights.data_caveats %}
+<h2>Data caveats</h2>
+<ul class="caveats">
+{% for caveat in insights.data_caveats %}
+<li>{{ caveat }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+{% endif %}
+
+</body>
+</html>

@@ -1,0 +1,70 @@
+/* Harbor & Vale — eda_report.html styling (PROJECT_PLAN.md §D.2 point 8).
+   Deterministic, static CSS — no external font/CDN fetch, so the report
+   renders identically offline and in CI. */
+
+body {
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 2rem;
+  background: #f7f8fa;
+  color: #1a202c;
+}
+
+h1, h2, h3 { color: #1a202c; }
+
+.headline {
+  font-size: 1.25rem;
+  color: #2b6cb0;
+  margin-bottom: 1.5rem;
+}
+
+.degraded-banner {
+  background: #fff5f5;
+  border: 2px solid #e53e3e;
+  color: #742a2a;
+  padding: 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.insight-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.insight-card h3 { margin-top: 0; }
+
+.evidence-key {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+table.stats-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  background: #ffffff;
+}
+
+table.stats-table th, table.stats-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+table.stats-table th { background: #edf2f7; }
+
+.figures img {
+  max-width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.caveats { color: #718096; font-size: 0.9rem; }
