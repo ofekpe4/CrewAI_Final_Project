@@ -269,39 +269,74 @@ See §2 "Conditions that trigger a later fallback to Pattern B" — primarily a
 
 ---
 
-## Addendum (Phase 3) — the exact guardrail return annotation CrewAI requires
+## Addendum (Phase 3, CORRECTED in Session 18) — the guardrail return annotation CrewAI requires
 
 Discovered wiring `harbor_vale.plans.contract_draft.validate_contract_draft` into
 a real `Task(guardrail=...)` against the pinned `crewai==1.15.20`, refining §5/§14.10
 above (not a contradiction — an added precision the Phase 1 spike did not need,
-since its guardrails were untyped or returned `tuple[bool, Any]` and were never
-constructed as a real `Task`).
+since its guardrails were never constructed as a real `Task`).
 
-Avoiding `from __future__ import annotations` is **necessary but not sufficient**.
-CrewAI's own `Task.guardrail` field validator inspects the function's return
-annotation and requires it to be **exactly** `typing.Tuple[bool, typing.Any]` —
-the legacy `typing.Tuple`/`typing.Any` spelling. The modern PEP 585/604
-equivalent fails at `Task(...)` construction:
+> **Correction (Session 18).** The version of this addendum first written in
+> Session 17 over-claimed: it said CrewAI requires the *exact legacy spelling*
+> `typing.Tuple[bool, typing.Any]` and that the modern `tuple[bool, Any]`
+> fails. That claim was never actually tested — Session 17's comparison used
+> `tuple[bool, object]` (note: `object`, not `Any`) against
+> `Tuple[bool, Any]`, which changed **two** variables at once (the generic
+> spelling *and* the second type argument) and drew a conclusion about the
+> wrong one. Session 18 isolated each variable independently; the real rule
+> is below, and it matches the Phase 1 Task 1.2 finding exactly — the hazard
+> is stringized annotations, not spelling.
+
+**Isolated verification (Session 18), same guardrail body, same `Task(...)`
+construction, only the return annotation varied:**
+
+| Case | Annotation (module-level, no `from __future__ import annotations` unless noted) | `Task(guardrail=fn)` |
+|---|---|:---:|
+| A | `-> tuple[bool, Any]` (PEP 585, modern) | **constructs cleanly** |
+| B | `-> Tuple[bool, Any]` (`typing.Tuple`, legacy) | **constructs cleanly** |
+| C | `-> tuple[bool, Any]`, but the module has `from __future__ import annotations` (annotation is stringized to `'tuple[bool, Any]'`) | **raises** `pydantic_core.ValidationError` |
+| D | `-> tuple[bool, object]` (Session 17's original, real/non-stringized annotation — `object`, not `Any`) | **raises** `pydantic_core.ValidationError` |
+
+Cases A and B prove `tuple[...]` vs. `Tuple[...]` makes no difference — Python's
+typing system treats them as equal at runtime, and CrewAI's validator accepts
+both. Case C reproduces the actual, real hazard: a **stringized** annotation
+(from `from __future__ import annotations`) — this is exactly the Phase 1
+Task 1.2 PEP 563 finding (§5 above), now confirmed to also apply to a real
+`Task(guardrail=...)` construction, not just reasoned about from source.
+Case D explains where Session 17's original failure actually came from: the
+second type argument must be `Any` specifically — `object` (a real, valid,
+non-stringized annotation) is rejected too, but for a completely different
+reason than spelling.
 
 ```python
-def fn(output) -> tuple[bool, object]: ...
+# FAILS — stringized (from __future__ import annotations in the module)
+from __future__ import annotations
+def fn(output) -> tuple[bool, Any]: ...
 Task(guardrail=fn)
 # pydantic_core.ValidationError: 1 validation error for Task
 # guardrail
 #   Value error, If return type is annotated, it must be Tuple[bool, Any]
+
+# FAILS — real annotation, but `object` instead of `Any`
+def fn(output) -> tuple[bool, object]: ...
+Task(guardrail=fn)  # same ValidationError
+
+# BOTH PASS — real (non-stringized) annotation, second arg is Any
+def fn(output) -> tuple[bool, Any]: ...          # PEP 585 spelling — OK
+def fn(output) -> Tuple[bool, Any]: ...          # typing.Tuple spelling — OK
 ```
 
-```python
-from typing import Any, Tuple
-def fn(output) -> Tuple[bool, Any]: ...
-Task(guardrail=fn)  # constructs cleanly
-```
-
-**Production rule (addendum to §14):** every Harbor & Vale guardrail function
-must be annotated `-> Tuple[bool, Any]` using `from typing import Any, Tuple`
-(not `tuple[bool, Any]`, not `tuple[bool, object]`), in a module that does not
-import `from __future__ import annotations`. Verified against `crewai==1.15.20`
-in `src/harbor_vale/plans/contract_draft.py`.
+**Production rule (corrected addendum to §14):** every Harbor & Vale
+guardrail function must have a **real, non-stringized** return annotation
+equal to `Tuple[bool, Any]` — either spelling (`tuple[bool, Any]` or
+`Tuple[bool, Any]`) works identically — with the second type argument
+literally `Any` (not `object`, not a narrower type), in a module that does
+not import `from __future__ import annotations`. The binding constraint is
+the Phase 1 PEP 563 rule (§5, §14.10): avoid stringized annotations in any
+guardrail module. `src/harbor_vale/plans/contract_draft.py` already uses
+`Tuple[bool, Any]` (the legacy spelling) — per this corrected finding that
+remains valid but was never actually *required*; no code change follows
+from this correction. Verified against `crewai==1.15.20`.
 
 ---
 

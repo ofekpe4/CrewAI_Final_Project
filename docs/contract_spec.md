@@ -327,11 +327,18 @@ is the Phase 3 guardrail — no CrewAI `Agent`/`Task`/`Crew` exists yet
   one needing a second, divergent copy of the same logic.
 - Returns `(True, ContractDraft)` on success.
 
-A previously undocumented CrewAI 1.15.20 requirement, found wiring this
-guardrail into a real `Task` in this phase: the return annotation must be
-written *exactly* `Tuple[bool, Any]` (`from typing import Any, Tuple`), not
-the modern `tuple[bool, Any]` — see `docs/architecture.md`'s Phase 3
-addendum for the reproduction and the exact error.
+A CrewAI 1.15.20 requirement, found wiring this guardrail into a real `Task`
+in this phase and precisely isolated afterward (corrected from an
+over-claim in the first version of this note — see `docs/architecture.md`'s
+Phase 3 addendum, "CORRECTED in Session 18"): the return annotation must be
+a **real, non-stringized** annotation equal to `Tuple[bool, Any]` — both
+`tuple[bool, Any]` (PEP 585) and `Tuple[bool, Any]` (`typing.Tuple`) work
+identically; what actually breaks `Task(...)` construction is a
+**stringized** annotation (a guardrail module importing
+`from __future__ import annotations`, per the Phase 1 PEP 563 finding,
+`docs/architecture.md` §5) or using `object` instead of `Any` as the second
+type argument. `validate_contract_draft` uses `Tuple[bool, Any]` — still
+correct, just not the only spelling that would have worked.
 
 ## 15. What Phase 3 explicitly does NOT do
 
