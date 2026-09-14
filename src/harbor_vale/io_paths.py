@@ -28,6 +28,7 @@ SRC = PROJECT_ROOT / "src"
 CONFIG = PROJECT_ROOT / "config"
 DATA = PROJECT_ROOT / "data"
 DATA_RAW = DATA / "raw"
+DATA_README = DATA / "README.md"
 ARTIFACTS = PROJECT_ROOT / "artifacts"
 RUNS = PROJECT_ROOT / "runs"
 LOGS = PROJECT_ROOT / "logs"
@@ -38,6 +39,12 @@ SPIKE = PROJECT_ROOT / "spike"
 
 # --- Config files -------------------------------------------------------------
 SETTINGS_YAML = CONFIG / "settings.yaml"
+
+# --- Dataset (Phase 2, PROJECT_PLAN.md §J) ---------------------------------
+# The selected dataset's raw file, at its deterministic acquisition filename.
+# Written only by scripts/download_data.py; never committed (data/raw/ is
+# git-ignored except .gitkeep). See data/README.md for provenance + SHA256.
+RAW_TELCO_CHURN_CSV = DATA_RAW / "telco_customer_churn.csv"
 
 # --- Crew 1 artifact locations ---------------------------------------------
 CREW1 = ARTIFACTS / "crew1"

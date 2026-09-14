@@ -35,10 +35,13 @@ validation:
   scale_drift_median_rel_tolerance: 0.25
   target_positive_rate_tolerance_abs: 0.05
 
-# Business context — PROVISIONAL. The dataset is not locked until Phase 2
-# (PROJECT_PLAN.md §A.7 "לא לנעול דאטהסט מוקדם מדי", §J). Do not treat as
-# authoritative; Phase 2 replaces this with source-documented values.
+# Business context — LOCKED in Phase 2 (PROJECT_PLAN.md §J, §Phase 2).
+# Full provenance, 12-criterion evidence, unit/leakage decisions, and
+# measured quality issues: data/README.md. Do not restate or reinterpret
+# those facts here; this block only names the selected dataset.
 business_context:
   domain: customer_churn
   task_type: binary_classification
-  status: provisional
+  status: locked
+  dataset_name: telco_customer_churn
+  dataset_source: data/README.md

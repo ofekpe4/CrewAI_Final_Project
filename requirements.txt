@@ -1,10 +1,13 @@
 # requirements.txt — exact environment lock
 # Generated from the project .venv via: python -m pip freeze
-# Python 3.12.14 (Homebrew, non-Conda) · generated 2026-09-08
-# crewai==1.15.20 is currently the only intentionally installed direct runtime dependency;
-# every other line is one of its transitive dependencies.
+# Python 3.12.14 (Homebrew, non-Conda) · generated 2026-09-08, updated 2026-09-14 (Phase 2)
+# Direct runtime dependencies intentionally installed: crewai==1.15.20, pandas==3.0.5
+# (pandas added in Phase 2 for dataset characterization — PROJECT_PLAN.md §Phase 2
+# Gate 2C — and for tests/unit/test_dataset_ingestion.py; no new transitive
+# dependency was pulled in, since numpy/python-dateutil/six were already present).
+# Every other line is a transitive dependency of one of the above.
 # This lock will be refreshed when further approved project dependencies
-# (pandas, scikit-learn, matplotlib/seaborn, Streamlit, etc.) are installed.
+# (scikit-learn, matplotlib/seaborn, Streamlit, etc.) are installed.
 
 aiofiles==24.1.0
 aiohappyeyeballs==2.7.1
@@ -87,6 +90,7 @@ opentelemetry-semantic-conventions==0.63b1
 orjson==3.12.0
 overrides==7.7.0
 packaging==26.3
+pandas==3.0.5
 pdfminer.six==20260107
 pdfplumber==0.11.10
 pendulum==3.2.0
