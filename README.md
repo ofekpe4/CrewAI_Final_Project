@@ -5,7 +5,7 @@ Two CrewAI crews separated by a **machine-enforced dataset contract** and a
 *seam*: a contract that one crew writes and the other must honour, and a Flow that
 checks it before anything downstream is allowed to run.
 
-> **Status: Phases 0–4 complete.**
+> **Status: Phases 0–5 complete.**
 > The environment and core infrastructure exist and are tested (Phase 0). The
 > CrewAI execution-pattern spike is resolved (Phase 1): **Pattern A** — one
 > `Crew` of 3 sequential `Task`s per crew, each with `output_pydantic` +
@@ -14,13 +14,18 @@ checks it before anything downstream is allowed to run.
 > [`docs/architecture.md`](docs/architecture.md). The dataset is selected and
 > reproducibly acquired (Phase 2). The Dataset Contract schema — `observed` vs.
 > `constraints`, never one becoming the other — is built and tested (Phase 3).
-> The **deterministic Validation Gate** now exists and is fully tested
-> (Phase 4): it checks a candidate `clean_data.csv` against a
-> `dataset_contract.json` with **zero LLM calls**, and is the sole future
-> PASS/FAIL authority before Crew 2 runs. See
-> [`docs/contract_spec.md`](docs/contract_spec.md).
-> **The crews, the Flow, the deterministic tools/handoff allowlist, the
-> trained model, and the Streamlit app are *not* implemented yet.**
+> The **deterministic Validation Gate** exists and is fully tested (Phase 4):
+> it checks a candidate `clean_data.csv` against a `dataset_contract.json`
+> with **zero LLM calls**, and is the sole future PASS/FAIL authority before
+> Crew 2 runs. See [`docs/contract_spec.md`](docs/contract_spec.md). **The
+> entire deterministic execution + security layer is now built and proven
+> end-to-end (Phase 5)**: profiling, a closed-vocabulary cleaning executor,
+> deterministic EDA statistics/figures/reporting, an exact-file Crew 1 →
+> Crew 2 handoff allowlist, a `ColumnTransformer`-based feature builder, and
+> `sklearn`-based train/evaluate/winner-selection — proven together on the
+> **real** 7,043-row Telco dataset with hardcoded (not agent-produced) plans,
+> **zero LLM calls**, and verified double-run byte-identical reproducibility.
+> **The crews, the Flow, and the Streamlit app are *not* implemented yet.**
 > See [Project status](#project-status) below.
 
 ---
@@ -167,21 +172,26 @@ CrewAI_Final_Project/
 │   ├── io_paths.py             # single source of path truth           [implemented]
 │   ├── logging_setup.py        # console + optional per-run file log   [implemented]
 │   ├── contract/                # schema.py · builder.py · validator.py [implemented — Phase 3–4]
-│   ├── plans/contract_draft.py  # ContractDraft + guardrail             [implemented — Phase 3]
+│   ├── plans/                   # contract_draft · cleaning_plan · insights_doc ·
+│   │                             # feature_plan · experiment_plan       [implemented — Phase 3, 5]
+│   ├── access/                  # allowlist.py · handoff.py (Crew1→Crew2 boundary) [implemented — Phase 5]
+│   ├── tools/                   # profiling · cleaning · eda · feature · modeling [implemented — Phase 5]
+│   ├── ml/                      # features.py · train.py · evaluate.py  [implemented — Phase 5]
+│   ├── templates/                # eda_report.html · insights.md · styles.css (Jinja2) [implemented — Phase 5]
 │   ├── demo/fault_injection.py  # deterministic mutation helpers (tests-only) [implemented — Phase 4]
-│   ├── access/  tools/  ml/  templates/                                # (placeholders)
-│   ├── crews/{analyst_crew,scientist_crew}/                            # (placeholders)
-│   └── flow/                                                           # (placeholder)
+│   ├── crews/{analyst_crew,scientist_crew}/                            # (placeholders — Phase 6–7)
+│   └── flow/                                                           # (placeholder — Phase 8)
 │
 ├── app/                        # Streamlit UI                          (placeholder — Phase 9)
 ├── data/raw/                   # downloaded datasets, git-ignored      [implemented — Phase 2]
 ├── artifacts/{crew1,validation,crew2}/                                 (placeholders — run outputs)
-├── scripts/download_data.py     # reproducible dataset acquisition      [implemented — Phase 2]
+├── scripts/{download_data.py, calibrate_validation_tolerances.py}      [implemented — Phase 2, 4]
 ├── spike/                       # Phase 1 disposable spikes (task_1_1..task_1_6) [evidence]
-├── docs/architecture.md         # orchestration decision + CrewAI 1.15.20 findings [Phase 1, corrected Phase 3]
+├── docs/architecture.md         # orchestration decision + CrewAI 1.15.20 findings [Phase 1, corrected Phase 3, 5]
 ├── docs/contract_spec.md        # Dataset Contract specification                  [Phase 3]
+├── docs/validation_calibration.md # scale/drift tolerance calibration evidence   [Phase 4]
 ├── tests/{unit,integration,failure,smoke,fixtures}/
-│   └── unit/  — Phase 0–4 unit tests (see "Running the tests" above)  [implemented]
+│   └── unit/  — Phase 0–5 unit tests (see "Running the tests" above)  [implemented]
 └── working flow/               # per-session development log
 ```
 
@@ -214,6 +224,13 @@ python tests/unit/test_validator_modeling.py                       # Phase 4 —
 python tests/unit/test_validator_aggregate.py                       # Phase 4 — gate decision rule
 python tests/unit/test_fault_injection.py                            # Phase 4 — demo helpers
 python tests/unit/test_validation_report_rendering.py                 # Phase 4 — report rendering
+python tests/unit/test_handoff_allowlist.py                             # Phase 5 — boundary security ⭐
+python tests/unit/test_cleaning_executor.py                              # Phase 5 — CleaningPlan + executor
+python tests/unit/test_eda_tools.py                                       # Phase 5 — EDA stats/figures/rendering
+python tests/unit/test_feature_builder.py                                  # Phase 5 — FeaturePlan + build_features
+python tests/unit/test_model_selection.py                                   # Phase 5 — train/evaluate determinism
+python tests/unit/test_plans_validation.py                                   # Phase 5 — guardrail parser contract
+python tests/unit/test_hardcoded_e2e.py                                       # Phase 5 — full E2E on real data ⭐ (~35s)
 ```
 
 Each prints `PASS`/`FAIL` per check and exits non-zero on any failure. Once
@@ -298,15 +315,73 @@ unchanged (`conftest.py` already wires the import paths).
       layer, not just the contract-representation layer.
 - [x] 10 test files, every check family + aggregate gate behaviour covered.
 
+### Done — Phase 5: deterministic tools + handoff boundary enforcement ⭐
+
+**"Agent plans, Python executes" — the entire execution layer built and
+proven BEFORE any agent is connected.** Plain Python functions with
+explicit typed signatures only — no CrewAI `@tool`/`BaseTool` yet (that
+wrapping is Phase 6–7). Zero LLM/Agent/Task/Crew/Flow anywhere.
+
+- [x] **`access/allowlist.py` + `access/handoff.py`** — the Crew 1 → Crew 2
+      boundary (§G.0): Layer 1 is logical names only (`HandoffName =
+      Literal["clean_data", "dataset_contract"]`, no path parameter exists
+      in the public signature); Layer 2 is `ExactFileAllowlist` — exact
+      resolved files, never a directory/glob/prefix, `../` traversal and
+      symlink escapes neutralised by `Path.resolve()`. 24 boundary-security
+      tests cover every denylist vector (raw data, `_internal/*`,
+      `insights.md`, `eda_report.html`, traversal, absolute paths, symlink
+      escapes, sibling files, directories).
+- [x] **`tools/profiling_tools.py` + `tools/cleaning_tools.py` +
+      `plans/cleaning_plan.py`** — deterministic dataset profiling and a
+      closed 7-operation `CleaningPlan` executor (`drop_duplicates`,
+      `impute`, `cast`, `rename`, `drop_column`, `clip`,
+      `standardize_category`) — no `eval`, no arbitrary transform.
+- [x] **`tools/eda_tools.py` + `templates/`** — deterministic EDA
+      statistics/correlations/figures (matplotlib, `Agg` backend, closed
+      after generation, deterministic filenames) and Jinja2-autoescaped
+      `eda_report.html`/`insights.md` rendering, with a visible degraded
+      banner when narrative is unavailable.
+- [x] **`plans/insights_doc.py`** — `InsightsDoc`'s anti-hallucination rule:
+      every `evidence_stat_key` must resolve to a real key in the measured
+      EDA statistics, or the insight is rejected.
+- [x] **`tools/feature_tools.py` + `ml/features.py` + `plans/feature_plan.py`**
+      — a validated `FeaturePlan` cross-checked against the real
+      `DatasetContract` (hard exclusions mechanically blocked, advisory
+      exclusions require a justified override, required features enforced,
+      target never admissible as a feature), executed via a closed-vocabulary
+      `sklearn.ColumnTransformer`.
+- [x] **`ml/train.py` + `ml/evaluate.py` + `plans/experiment_plan.py`** —
+      the closed 3-estimator vocabulary (`logistic_regression`,
+      `random_forest`, `gradient_boosting`) with per-estimator parameter
+      allowlists (`random_state` never agent-settable); the approved
+      protocol exactly (`train_test_split(test_size=0.2, stratify=y,
+      random_state=42)`, `StratifiedKFold(5, shuffle=True, random_state=42)`
+      on train only, preprocessing inside the `Pipeline`, test set touched
+      once); Python-only winner selection (argmax, deterministic tie-break).
+- [x] **The hardcoded, zero-LLM, full end-to-end proof** — raw Telco data
+      (7,043 real rows, not the 30-row synthetic fixture) → cleaning →
+      EDA → contract → **Phase 4 gate PASS** → Crew 2 handoff → features →
+      train/evaluate → winner → `experiments.json` → `model.joblib`. Run
+      **twice** with identical inputs/plans/seeds: verified byte-identical
+      for every artifact including figures and `model.joblib` itself — the
+      one field allowed (and confirmed) to differ is the validation
+      report's own `validated_at` timestamp.
+- [x] 130 new test functions across 7 files, plus every Phase 0–4 test
+      still green.
+
 ### Not started
 
 Everything else. Specifically **not implemented and not working yet**:
 
-- Deterministic **tools** and the handoff allowlist (Phase 5).
-- **Crew 1** (Data Analyst) and **Crew 2** (Data Scientist) (Phases 6–7).
+- **Crew 1** (Data Analyst) and **Crew 2** (Data Scientist) (Phases 6–7) —
+  the deterministic tools above exist as plain functions; CrewAI
+  `@tool`/`BaseTool` wrapping and the actual `Agent`/`Task`/`Crew`
+  definitions do not exist yet.
 - The **Flow** orchestration and failure demo (Phases 8, 10).
 - **Streamlit** app (Phase 9).
-- Any trained **model**, evaluation report, or model card.
+- Any trained **model** actually served, evaluation report, or model card
+  as a real production artifact (the Phase 5 proof's model/reports exist
+  only in an isolated test workspace, never in `artifacts/`).
 
 There is no runnable pipeline yet. `make run` / `make demo-fail` do not exist.
 

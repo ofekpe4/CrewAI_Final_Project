@@ -1,13 +1,16 @@
 # requirements.txt — exact environment lock
 # Generated from the project .venv via: python -m pip freeze
-# Python 3.12.14 (Homebrew, non-Conda) · generated 2026-09-08, updated 2026-09-14 (Phase 2)
-# Direct runtime dependencies intentionally installed: crewai==1.15.20, pandas==3.0.5
-# (pandas added in Phase 2 for dataset characterization — PROJECT_PLAN.md §Phase 2
-# Gate 2C — and for tests/unit/test_dataset_ingestion.py; no new transitive
-# dependency was pulled in, since numpy/python-dateutil/six were already present).
+# Python 3.12.14 (Homebrew, non-Conda) · generated 2026-09-08, updated 2026-09-14 (Phase 2),
+# updated 2026-09-14 (Phase 5)
+# Direct runtime dependencies intentionally installed: crewai==1.15.20, pandas==3.0.5,
+# scikit-learn==1.9.1, matplotlib==3.11.2, joblib==1.6.0
+# (pandas added in Phase 2 for dataset characterization — PROJECT_PLAN.md §Phase 2 Gate 2C.
+# scikit-learn/matplotlib/joblib added in Phase 5 per PROJECT_PLAN.md §Phase 5 scope
+# (ml/train.py + ml/evaluate.py, sklearn.Pipeline/ColumnTransformer, deterministic EDA
+# figures, model.joblib serialization) — explicitly Plan-required, not incidental.
+# seaborn was NOT installed: not currently used by any Phase 5 code, matplotlib alone
+# is sufficient for the deterministic figures this phase actually renders.)
 # Every other line is a transitive dependency of one of the above.
-# This lock will be refreshed when further approved project dependencies
-# (scikit-learn, matplotlib/seaborn, Streamlit, etc.) are installed.
 
 aiofiles==24.1.0
 aiohappyeyeballs==2.7.1
@@ -28,10 +31,13 @@ cffi==2.1.1
 charset-normalizer==3.5.1
 chromadb==1.1.1
 click==8.5.0
+cloudpickle==3.1.2
+contourpy==1.4.0
 crewai==1.15.20
 crewai-cli==1.15.20
 crewai-core==1.15.20
 cryptography==50.0.1
+cycler==0.12.1
 deprecation==2.1.0
 distro==1.9.0
 docstring_parser==0.18.0
@@ -39,6 +45,7 @@ durationpy==0.11
 et_xmlfile==2.0.0
 filelock==3.32.5
 flatbuffers==25.12.19
+fonttools==4.65.0
 frozenlist==1.8.0
 fsspec==2026.7.0
 google-re2==1.1.20251105
@@ -57,11 +64,13 @@ instructor==1.16.0
 Jinja2==3.1.6
 jiter==0.14.0
 jmespath==1.1.0
+joblib==1.6.0
 json5==0.10.0
 json_repair==0.60.1
 jsonref==1.1.0
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
+kiwisolver==1.5.1
 kubernetes==36.0.3
 lance-namespace==0.12.0
 lance-namespace-urllib3-client==0.12.0
@@ -70,11 +79,13 @@ lark==1.3.1
 linkify-it-py==2.2.0
 markdown-it-py==4.2.0
 MarkupSafe==3.0.3
+matplotlib==3.11.2
 mcp==1.28.1
 mdit-py-plugins==0.6.1
 mdurl==0.1.2
 mmh3==5.3.0
 multidict==6.7.1
+narwhals==2.26.0
 numpy==2.5.3
 oauthlib==3.3.1
 onnxruntime==1.29.0
@@ -108,6 +119,7 @@ pydantic-settings==2.15.0
 pydantic_core==2.41.5
 Pygments==2.21.0
 PyJWT==2.13.0
+pyparsing==3.3.2
 pypdfium2==5.13.0
 PyPika==0.51.1
 pyproject_hooks==1.2.0
@@ -121,6 +133,8 @@ requests==2.34.2
 requests-oauthlib==2.0.0
 rich==14.3.4
 rpds-py==2026.6.3
+scikit-learn==1.9.1
+scipy==1.18.1
 shellingham==1.5.4
 six==1.17.0
 sniffio==1.3.1
@@ -128,6 +142,7 @@ sse-starlette==3.4.11
 starlette==1.6.0
 tenacity==9.1.4
 textual==8.2.8
+threadpoolctl==3.6.0
 tokenizers==0.23.2
 tomli==2.0.2
 tomli_w==1.1.0
