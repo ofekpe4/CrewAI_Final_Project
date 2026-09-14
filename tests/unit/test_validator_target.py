@@ -22,7 +22,7 @@ for _p in (str(_ROOT), str(_ROOT / "src")):
 
 from harbor_vale.contract.validator import run_validation_gate  # noqa: E402
 from harbor_vale.demo import fault_injection as fi  # noqa: E402
-from tests.fixtures.gate_fixtures import CONTRACT_JSON, FIXTURE_CSV, build_contract_json  # noqa: E402
+from tests.fixtures.gate_fixtures import CONTRACT_JSON, EDA_REPORT_FIXTURE, FIXTURE_CSV, INSIGHTS_MD_FIXTURE, build_contract_json  # noqa: E402
 
 
 def _findings(report, check_id: str):
@@ -32,7 +32,7 @@ def _findings(report, check_id: str):
 def test_missing_target_column_is_an_error_and_skips_further_target_checks() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.drop_required_column(FIXTURE_CSV, Path(tmp) / "d.csv", column="churn")
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "TARGET_COLUMN_PRESENT")
     assert len(hits) == 1 and hits[0].severity == "ERROR"
@@ -44,7 +44,7 @@ def test_missing_target_column_is_an_error_and_skips_further_target_checks() -> 
 def test_unknown_target_label_violates_closed_domain() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.unknown_category(FIXTURE_CSV, Path(tmp) / "u.csv", column="churn", new_value="Maybe")
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "TARGET_CLOSED_DOMAIN")
     assert len(hits) == 1 and hits[0].severity == "ERROR"
@@ -54,7 +54,7 @@ def test_unknown_target_label_violates_closed_domain() -> None:
 def test_null_target_violates_nullable_false() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.inject_nulls(FIXTURE_CSV, Path(tmp) / "n.csv", column="churn", count=2)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "TARGET_NO_NULLS")
     assert len(hits) == 1 and hits[0].severity == "ERROR" and hits[0].observed == 2
@@ -68,7 +68,7 @@ def test_one_class_target_fails_at_least_two_classes() -> None:
         df["churn"] = 0
         out = Path(tmp) / "one_class.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "TARGET_AT_LEAST_TWO_CLASSES")
     assert len(hits) == 1 and hits[0].observed == 1
@@ -81,7 +81,7 @@ def test_flipped_target_encoding_triggers_drift_when_drift_policy_declared() -> 
         tmp_path = Path(tmp)
         contract = build_contract_json(tmp_path, with_target_drift=True)
         out = fi.flip_target_encoding(FIXTURE_CSV, tmp_path / "flipped.csv", target_column="churn")
-        report = run_validation_gate(out, contract, run_id="t")
+        report = run_validation_gate(out, contract, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "TARGET_POSITIVE_RATE_DRIFT")
     assert len(hits) == 1 and hits[0].severity == "ERROR"
@@ -94,7 +94,7 @@ def test_flipped_target_encoding_is_silent_without_a_declared_drift_policy() -> 
     `observed.positive_rate` by itself."""
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.flip_target_encoding(FIXTURE_CSV, Path(tmp) / "flipped.csv", target_column="churn")
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "TARGET_POSITIVE_RATE_DRIFT")
 
 
@@ -102,7 +102,7 @@ def test_in_tolerance_drift_passes_when_drift_policy_declared() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         contract = build_contract_json(tmp_path, with_target_drift=True)
-        report = run_validation_gate(FIXTURE_CSV, contract, run_id="t")
+        report = run_validation_gate(FIXTURE_CSV, contract, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is True
     assert not _findings(report, "TARGET_POSITIVE_RATE_DRIFT")
 

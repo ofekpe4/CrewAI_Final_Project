@@ -28,11 +28,24 @@ from tests.fixtures.build_example_contract import build_draft  # noqa: E402
 FIXTURE_CSV: Path = _ROOT / "tests" / "fixtures" / "telco_contract_fixture.csv"
 CONTRACT_JSON: Path = _ROOT / "tests" / "fixtures" / "contract_example.json"
 
+# Family A (§F.1) requires ALL FOUR Crew 1 artifacts present/non-empty, not
+# just clean_data.csv + dataset_contract.json — these two stand in for the
+# narrative artifacts (`eda_report.html`, `insights.md`) that do not exist
+# as production files until Phase 6+. Existence/non-emptiness ONLY: their
+# content is never read by `contract/validator.py` (see its module
+# docstring's "Crew 2 boundary" note — checking presence here does not
+# widen what Crew 2 is allowed to read; that boundary is Phase 5's
+# access/allowlist.py, untouched by this).
+EDA_REPORT_FIXTURE: Path = _ROOT / "tests" / "fixtures" / "eda_report_fixture.html"
+INSIGHTS_MD_FIXTURE: Path = _ROOT / "tests" / "fixtures" / "insights_fixture.md"
+
 assert FIXTURE_CSV.is_file(), "the Phase 3 fixture CSV must exist on disk"
 assert CONTRACT_JSON.is_file(), (
     "tests/fixtures/contract_example.json must exist — regenerate with "
     "`python tests/fixtures/build_example_contract.py` if missing"
 )
+assert EDA_REPORT_FIXTURE.is_file(), "tests/fixtures/eda_report_fixture.html must exist on disk"
+assert INSIGHTS_MD_FIXTURE.is_file(), "tests/fixtures/insights_fixture.md must exist on disk"
 
 
 def _validated_draft():

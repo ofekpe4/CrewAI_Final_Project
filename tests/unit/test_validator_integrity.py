@@ -23,7 +23,7 @@ for _p in (str(_ROOT), str(_ROOT / "src")):
         sys.path.insert(0, _p)
 
 from harbor_vale.contract.validator import run_validation_gate  # noqa: E402
-from tests.fixtures.gate_fixtures import CONTRACT_JSON, FIXTURE_CSV  # noqa: E402
+from tests.fixtures.gate_fixtures import CONTRACT_JSON, EDA_REPORT_FIXTURE, FIXTURE_CSV, INSIGHTS_MD_FIXTURE  # noqa: E402
 
 
 def _findings(report, check_id: str):
@@ -31,7 +31,7 @@ def _findings(report, check_id: str):
 
 
 def test_matching_bytes_pass_integrity() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="t")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "INTEGRITY_SHA256_MATCH")
 
 
@@ -41,7 +41,7 @@ def test_matching_bytes_in_a_different_file_still_pass() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         copy_path = Path(tmp) / "copy.csv"
         shutil.copyfile(FIXTURE_CSV, copy_path)
-        report = run_validation_gate(copy_path, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(copy_path, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "INTEGRITY_SHA256_MATCH")
 
 
@@ -51,7 +51,7 @@ def test_a_single_changed_byte_fails_integrity() -> None:
         shutil.copyfile(FIXTURE_CSV, mutated_path)
         with mutated_path.open("a", encoding="utf-8") as fh:
             fh.write("\n")  # a single trailing byte is enough
-        report = run_validation_gate(mutated_path, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(mutated_path, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "INTEGRITY_SHA256_MATCH")
     assert len(hits) == 1 and hits[0].severity == "ERROR"
@@ -65,7 +65,7 @@ def test_integrity_hashes_the_actual_file_bytes_not_a_reserialized_dataframe() -
         original_bytes = FIXTURE_CSV.read_bytes()
         crlf_path = Path(tmp) / "crlf.csv"
         crlf_path.write_bytes(original_bytes.replace(b"\n", b"\r\n"))
-        report = run_validation_gate(crlf_path, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(crlf_path, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
         expected_hash = hashlib.sha256(crlf_path.read_bytes()).hexdigest()
     hits = _findings(report, "INTEGRITY_SHA256_MATCH")
     assert len(hits) == 1

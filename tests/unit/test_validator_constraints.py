@@ -27,7 +27,7 @@ import pandas as pd  # noqa: E402
 
 from harbor_vale.contract.validator import run_validation_gate  # noqa: E402
 from harbor_vale.demo import fault_injection as fi  # noqa: E402
-from tests.fixtures.gate_fixtures import CONTRACT_JSON, FIXTURE_CSV  # noqa: E402
+from tests.fixtures.gate_fixtures import CONTRACT_JSON, EDA_REPORT_FIXTURE, FIXTURE_CSV, INSIGHTS_MD_FIXTURE  # noqa: E402
 
 
 def _findings(report, check_id: str):
@@ -39,7 +39,7 @@ def _findings(report, check_id: str):
 def test_nulls_in_a_nullable_false_column_are_an_error() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.inject_nulls(FIXTURE_CSV, Path(tmp) / "n.csv", column="contract_type", count=3)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "CONSTRAINTS_NULLABLE")
     assert len(hits) == 1 and hits[0].column == "contract_type" and hits[0].observed == 3
@@ -54,7 +54,7 @@ def test_business_range_min_violation_is_an_error() -> None:
         df.loc[df.index[0], "monthly_charges"] = -5.0
         out = Path(tmp) / "neg.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "CONSTRAINTS_BUSINESS_RANGE")
     assert len(hits) == 1 and hits[0].column == "monthly_charges"
@@ -69,7 +69,7 @@ def test_business_range_with_no_declared_max_never_rejects_a_high_value() -> Non
         df.loc[df.index[0], "monthly_charges"] = future_value
         out = Path(tmp) / "future.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "CONSTRAINTS_BUSINESS_RANGE")
 
 
@@ -77,7 +77,7 @@ def test_no_violation_from_observed_max_alone() -> None:
     """The literal Phase 3 -> Phase 4 continuity test: run the gate against
     the untouched fixture itself. Every value in it IS the observed max (by
     definition) and none of that triggers a business_range finding."""
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="t")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "CONSTRAINTS_BUSINESS_RANGE")
     assert report.passed is True
 
@@ -87,7 +87,7 @@ def test_no_violation_from_observed_max_alone() -> None:
 def test_closed_domain_violation_on_a_declared_column_is_an_error() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         out = fi.unknown_category(FIXTURE_CSV, Path(tmp) / "u.csv", column="internet_service", new_value="Satellite")
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "CONSTRAINTS_CLOSED_DOMAIN")
     assert len(hits) == 1 and hits[0].column == "internet_service" and "Satellite" in hits[0].observed
@@ -101,14 +101,14 @@ def test_duplicate_primary_key_values_are_an_error() -> None:
         df.loc[df.index[1], "customer_id"] = df.loc[df.index[0], "customer_id"]
         out = Path(tmp) / "dup.csv"
         df.to_csv(out, index=False)
-        report = run_validation_gate(out, CONTRACT_JSON, run_id="t")
+        report = run_validation_gate(out, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert report.passed is False
     hits = _findings(report, "CONSTRAINTS_PRIMARY_KEY_UNIQUE")
     assert len(hits) == 1 and hits[0].observed == 2  # both participating rows counted
 
 
 def test_unique_primary_key_produces_no_finding() -> None:
-    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, run_id="t")
+    report = run_validation_gate(FIXTURE_CSV, CONTRACT_JSON, EDA_REPORT_FIXTURE, INSIGHTS_MD_FIXTURE, run_id="t")
     assert not _findings(report, "CONSTRAINTS_PRIMARY_KEY_UNIQUE")
 
 
