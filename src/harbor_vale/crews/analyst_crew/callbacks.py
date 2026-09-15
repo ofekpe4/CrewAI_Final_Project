@@ -187,6 +187,19 @@ def render_eda_and_insights(task_output) -> None:  # noqa: ARG001
     degraded_reason = ctx.eda_degraded_reason if ctx.eda_degraded else None
     insights = None if ctx.eda_degraded else ctx.insights_doc
 
+    # Persist the accepted InsightsDoc (Phase 8 §Internal Gate 8.10 replay
+    # audit) — the same guardrail-validated structured output this callback
+    # already renders from, written once here so `--replay-plans` can later
+    # reload and re-render it deterministically without a live LLM call. A
+    # degraded run has no valid InsightsDoc to persist (§D.2's forced-accept
+    # leaves ctx.insights_doc None) — nothing is written in that case, an
+    # accepted limitation of replay for a degraded narrative run, not a bug.
+    if insights is not None:
+        ctx.internal_dir.mkdir(parents=True, exist_ok=True)
+        (ctx.internal_dir / "insights_doc.json").write_text(
+            insights.model_dump_json(indent=2), encoding="utf-8"
+        )
+
     render_eda_report_html(
         dataset_name=ctx.dataset_name,
         stats=ctx.eda_stats,
@@ -215,6 +228,16 @@ def build_final_contract(task_output) -> None:  # noqa: ARG001
     ctx = get_active_context()
     if ctx.contract_draft is None:  # pragma: no cover — guarded by CrewAI's own guardrail-then-callback ordering
         raise RuntimeError("build_final_contract: ctx.contract_draft is None — guardrail did not run first")
+
+    # Persist the accepted ContractDraft (Phase 8 §Internal Gate 8.10 replay
+    # audit) — the pre-measurement draft `--replay-plans` re-merges with a
+    # freshly measured clean_data.csv via this SAME build_contract() call,
+    # so a stored contract is reproducible from real clean bytes rather than
+    # replayed as a frozen JSON blob.
+    ctx.internal_dir.mkdir(parents=True, exist_ok=True)
+    (ctx.internal_dir / "contract_draft.json").write_text(
+        ctx.contract_draft.model_dump_json(indent=2), encoding="utf-8"
+    )
 
     contract = build_contract(
         ctx.contract_draft,
