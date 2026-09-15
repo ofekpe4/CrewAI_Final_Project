@@ -1,9 +1,8 @@
-# Crew 1 — Agent Design (Phase 6)
+# Agent Design — Crew 1 (Phase 6) and Crew 2 (Phase 7)
 
-Documents each of Crew 1's three agents against the exact 9-point structure
-PROJECT_PLAN.md §D.1-D.3 defines, plus the cross-cutting design questions
-Phase 6's Internal Gate 6.6 asks for. **Crew 2 (Phase 7) is not documented
-here** — it does not exist yet.
+Documents each Crew's agents against the exact 9-point structure
+PROJECT_PLAN.md §D.1-D.3 / §G.1-G.3 defines, plus the cross-cutting design
+questions Phase 6/7's Internal Gates ask for.
 
 ---
 
@@ -236,3 +235,246 @@ Recorded in `working flow/2026-09-15_session-23.md` (Phase 6's session
 record), per PROJECT_PLAN.md §T Phase 6's explicit requirement — the run 1
 → run 2 comparison, what changed in `config/agents.yaml`/`config/tasks.yaml`
 and why, and an honest account of what improved and what did not.
+
+---
+
+# Crew 2 — Agent Design (Phase 7)
+
+## Why exactly three agents
+
+Same principle as Crew 1 (§ above): three different KINDS of judgement, not
+three pipeline stages. *What should the model actually be trained on, and
+how* (Feature Engineer) · *what experiment design is defensible for this
+business problem* (Modeling Specialist) · *what does this model's own
+measured behavior, plus the contract's own declared assumptions, honestly
+imply for anyone using it* (Responsible AI Documenter). Training itself,
+metric computation, and winner selection are NOT agent judgement calls —
+they are entirely deterministic (`ml/train.py`, `ml/evaluate.py`), so they
+stay outside any Agent, exactly as Crew 1 keeps cleaning EXECUTION and
+contract-building outside its Agents.
+
+## The two-file handoff boundary (§G.0)
+
+Crew 2's entire view of Crew 1 is exactly two logical names —
+`"clean_data"` and `"dataset_contract"` — reachable only through
+`read_handoff(name: Literal["clean_data", "dataset_contract"])`. The
+`Literal` is INLINED directly in the tool function's parameter annotation,
+never via a module-level named alias — `docs/architecture.md`'s Finding 3
+(Phase 6 addendum) proved a named alias breaks CrewAI's dynamic per-tool
+Pydantic schema construction with `PydanticUndefinedAnnotation`; inlining is
+one of the two documented fixes, and Phase 7 needed the genuinely
+multi-valued `Literal` case Crew 1 avoided by using zero-argument tools
+instead. `access/allowlist.ExactFileAllowlist` (Phase 5, unmodified) is the
+defense-in-depth Layer 2 underneath: even a resolved-path bypass attempt is
+denied. Both layers are proven at the actual `@tool`-wrapped function level
+in `tests/integration/test_crew2_tool_surface.py` — signature inspection
+plus real denied/allowed calls through a live `Crew2RunContext` — not
+merely at the underlying `ExactFileAllowlist` class Phase 5 already tested.
+
+**Every Crew 1 field `Crew2RunContext` ever caches (`contract`, `clean_df`)
+is loaded exclusively through `ctx.handoff.read_handoff(...)`** — including
+from guardrails, which are trusted Python, not an agent. This keeps exactly
+one audited channel to Crew 1 data instead of a "trusted code can read the
+real path directly" shortcut that would otherwise exist right next to the
+allowlisted one.
+
+## `Crew2RunContext` (§ Internal Gate 7.2)
+
+Same rationale and same concurrency guarantee as Crew 1's `Crew1RunContext`
+(see above) — one run at a time, plain module-level tool/guardrail/callback
+functions (`Task.callback`'s `SerializableCallable` typing forbids
+closures), reached via `runtime.get_active_context()`.
+`GUARDRAIL_MAX_RETRIES = 2` is Crew 2's own single source of truth
+(`guardrails.py`), matching Crew 1's constant but deliberately not shared
+with it — the two crews' retry budgets are independently declared, even
+though they currently hold the same value.
+
+## Critical vs. narrative failure
+
+Agent 4 (Feature Engineer) and Agent 5 (Modeling Specialist) are
+**critical**: an invalid `FeaturePlan`/`ExperimentPlan` after
+`guardrail_max_retries` (2) retries halts Crew 2 with
+`status="halted_agent_failure"` and produces **no fallback** — a guessed
+feature set or a guessed experiment design is exactly the kind of false
+confidence this project exists to prevent. Agent 6 (Responsible AI
+Documenter) is **narrative**: on exhaustion it force-accepts (the same
+mechanism `guardrail_insights_doc` proved safe in Phase 6) and Crew 2
+still finishes, rendering a deterministic, truthful fallback
+`model_card.md` with a visible degradation banner instead of a
+narrative-only halt.
+
+## Agent Plans, Python Executes
+
+No Crew 2 agent fits a preprocessor, trains a model, computes a metric, or
+selects a winner. Every agent produces a validated, structured plan
+(`FeaturePlan` / `ExperimentPlan` / `ModelCard`); `callbacks.py`'s three
+functions are the only code that ever touches `clean_df`, fits a
+`sklearn.Pipeline`, or writes an artifact.
+
+---
+
+## G.1 — Agent 4: Feature Engineer 🔴 CRITICAL
+
+1. **Why an Agent, not deterministic Python?** Which columns to use, which
+   transform/encoding each one needs, and — critically — whether an
+   `advisory`-excluded column is legitimately usable for THIS dataset are
+   judgement calls that need to read and interpret the contract's
+   semantics, not just its shape.
+2. **Reasoning performed.** Reads the contract's `required_features` /
+   `excluded_features` / `columns`; reads the real measured profile via
+   `profile_handoff_data`; decides `use_features`, `transforms` (e.g.
+   `log1p` on right-skewed monetary columns), `encoders` (one per
+   categorical feature used), and any `advisory_overrides` with a concrete,
+   dataset-specific justification.
+3. **Tools.** `read_handoff` (`"clean_data"` or `"dataset_contract"`),
+   `profile_handoff_data` — both allowlisted, zero free path parameter.
+4. **Context.** `context=[]` (first task) plus the tool-exposed contract
+   and profile.
+5. **Forbidden.** Touching raw data; writing `features.csv`; using a
+   `hard`-excluded feature; fitting any preprocessing itself; computing
+   statistics from the eventual test set (it does not exist yet at this
+   point in the pipeline).
+6. **Structured output.** `FeaturePlan` (`plans/feature_plan.py`, Phase 5,
+   reused verbatim) — `contract_acknowledgment` (§F.0 layer 2, non-blocking
+   acknowledgment), `use_features`, `derived`, `transforms`, `encoders`,
+   `dropped`, `advisory_overrides`.
+7. **Validation / guardrail.** `guardrails.guardrail_feature_plan` wraps
+   `validate_feature_plan`, cross-checked against the ACTUAL current
+   `DatasetContract` loaded via the allowlist (never a memorized/assumed
+   naming convention — the Session 26 grounding lesson, generalized to
+   Crew 2 in `config/tasks.yaml`'s explicit STEP 1/2/3 process). Mechanical
+   rejections: target as feature, unknown column, missing required
+   feature, `hard`-excluded feature, `advisory`-excluded feature without a
+   matching override, override referencing a non-advisory column,
+   contract-version mismatch. `guardrail_max_retries=2`.
+8. **Consumer / callback.** `callbacks.persist_feature_plan_and_build_features`:
+   persists the plan to `_internal/feature_plan.json`, calls the already-
+   tested `tools/feature_tools.build_features` (unfitted `ColumnTransformer`
+   — nothing is fit on the full dataset here), writes `features.csv`.
+9. **Failure policy.** 🔴 CRITICAL. 2 exhausted retries → Crew 2 halts,
+   rejected raw output persisted to `_internal/rejected_feature_plan.json`,
+   Tasks 2/3 never run, no `features.csv`.
+
+---
+
+## G.2 — Agent 5: Modeling & Experimentation Specialist 🔴 CRITICAL
+
+1. **Why an Agent, not deterministic Python?** Choosing a business-
+   appropriate primary metric under class imbalance, and picking which
+   model families are worth comparing and why, is a judgement call with
+   business context (missing a genuine churner costs more than a false
+   alarm) — not a fixed rule.
+2. **Reasoning performed.** Reads the target's measured `positive_rate` and
+   Crew 2's own approved `FeaturePlan`; proposes `primary_metric` +
+   `metric_rationale`, `cv_folds`, and ≥2 variants from the frozen
+   estimator set, each with a plain, defensible hyperparameter choice and a
+   one-sentence rationale.
+3. **Tools.** `read_handoff("dataset_contract")`, `read_feature_plan()`
+   (Crew 2's own already-written artifact). **Deliberately does NOT** carry
+   `read_experiment_results` — that tool exists in `tools.py` (interface
+   parity with §G.2 point 3's full table) but is wired only onto Agent 6,
+   because it can only ever return real content AFTER Task 2's callback
+   trains — during Task 2 itself, calling it would only ever raise. Wiring
+   it here would invite a call that cannot succeed; PROJECT_PLAN.md's own
+   "3 Agents / 3 Tasks, no post-training narrative Task" constraint is
+   respected by giving the "after training" tool only to the "after
+   training" agent (Agent 6), not by adding a 4th task.
+4. **Context.** `context=[feature_task]` plus the tool-exposed contract and
+   FeaturePlan.
+5. **Forbidden.** Training a model itself; inventing a metric; choosing the
+   winner; seeing the test set before training completes; any estimator
+   outside `logistic_regression`/`random_forest`/`gradient_boosting`;
+   hyperparameter search/tuning; setting `random_state` itself.
+6. **Structured output.** `ExperimentPlan` (`plans/experiment_plan.py`,
+   Phase 5) — `primary_metric`, `metric_rationale`, `cv_folds`, `variants[]`.
+7. **Validation / guardrail.** `guardrails.guardrail_experiment_plan` wraps
+   `validate_experiment_plan`: estimator from the closed `Literal`,
+   per-estimator params allowlist, ≥2 variants, unique names,
+   `task_type` compatibility (bound to the real contract's
+   `target.task_type`). `guardrail_max_retries=2`.
+8. **Consumer / callback.** `callbacks.train_and_evaluate`: runs the exact
+   approved protocol (`train_test_split(test_size=0.2, stratify=y,
+   random_state=42)`, `StratifiedKFold(5, shuffle=True, random_state=42)`,
+   preprocessing INSIDE the `Pipeline`, test set touched exactly once);
+   Python selects the winner by `argmax(primary_metric)` over CV metrics
+   (deterministic tie-break — earliest-declared variant on an exact tie);
+   writes `experiments.json`, `model.joblib`, and renders
+   `evaluation_report.md` from `experiments.json` + the plan's own
+   narrative rationale — never from an unverified number.
+9. **Failure policy.** 🔴 CRITICAL. 2 exhausted retries → Crew 2 halts,
+   rejected raw output persisted to `_internal/rejected_experiment_plan.json`,
+   `features.csv` remains (Task 1 already succeeded) but no
+   `model.joblib`/`experiments.json`/`evaluation_report.md`/`model_card.md`.
+
+---
+
+## G.3 — Agent 6: Responsible AI Documenter 🟡 NARRATIVE
+
+1. **Why an Agent, not deterministic Python?** Translating the contract's
+   own declared `assumptions` into an operational limitation (e.g. an
+   undocumented currency implies the model assumes measurement scale stays
+   constant, and an upstream unit change — the original Harbor & Vale
+   incident — would silently invalidate its predictions) is exactly the
+   kind of judgement-plus-honesty task an LLM adds value on; a template
+   cannot know which of the contract's assumptions actually matters for
+   THIS model.
+2. **Reasoning performed.** Reads the contract's `assumptions`, Crew 2's
+   own `FeaturePlan` and real `experiments.json`; writes purpose, intended
+   use, limitations, ethical considerations, and monitoring
+   recommendations grounded in what was actually measured and actually
+   assumed.
+3. **Tools.** `read_handoff("dataset_contract")`, `read_feature_plan()`,
+   `read_experiment_results()` — all Crew 2's own artifacts + the
+   allowlisted contract; never `insights.md`, `eda_report.html`, or any
+   Crew 1 `_internal` file.
+4. **Context.** `context=[feature_task, modeling_task]` plus the
+   tool-exposed contract, FeaturePlan, and real experiment results.
+5. **Forbidden.** Inventing a metric; claiming a fairness/bias metric was
+   measured when none was; rewriting `evaluation_report.md`.
+6. **Structured output.** `ModelCard` (`plans/model_card.py`, Phase 5) —
+   `purpose`, `intended_use`, `out_of_scope_use`, `training_data_summary`,
+   `metrics_summary` (typed `MetricClaim`s), `limitations`,
+   `ethical_considerations`, `contract_dependencies`,
+   `monitoring_recommendations`.
+7. **Validation / guardrail.** `guardrails.guardrail_model_card` wraps
+   `validate_model_card`: every `MetricClaim` mechanically verified against
+   the real `experiments.json` (metric/split/variant/value must all match
+   exactly — `MetricName` is a closed `Literal` with no `"fairness"` value
+   constructible at all); `contract_dependencies` must include at least one
+   string that is an EXACT match of a real `contract.assumptions` entry.
+   `guardrail_max_retries=2`.
+8. **Consumer / callback.** `callbacks.render_model_card` →
+   `tools/report_tools.render_model_card_markdown`: normal mode renders
+   ONLY the validated `ModelCard`'s fields; degraded mode ignores the
+   invalid LLM content entirely and builds its own minimal, truthful
+   fallback directly from `experiments.json`'s winner metrics and the
+   contract's real `assumptions` — with the required visible banner.
+9. **Failure policy.** 🟡 NARRATIVE — visible fallback, not a halt. Same
+   forced-accept mechanism as Crew 1's `guardrail_insights_doc` (proven
+   safe against real `crewai==1.15.20`): on the final allowed attempt, if
+   still invalid, the guardrail returns `(True, output)` unchanged so
+   CrewAI does not raise; `ctx.model_card_degraded=True` is set explicitly,
+   and the callback renders from that flag, never from the unvalidated
+   content. Crew 2 still produces all four required artifacts.
+
+## Live acceptance run — one code-level learning iteration (not prompt-only)
+
+Recorded in full in `working flow/2026-09-15_session-27.md`. In short: Run 1
+(the real, Session-26 Crew 1 handoff) halted inside Task 2's deterministic
+training callback — not an agent/guardrail defect — because the real
+`clean_data.csv` still carries 11 measured nulls in `TotalCharges`, and
+`ml/features.build_preprocessor` had no NaN-handling case (`StandardScaler`
+silently passes a NaN through by sklearn design; no estimator accepts one).
+This was a genuine, previously-unexercised Phase 5 gap, not a prompt-quality
+issue, so the fix was code (`SimpleImputer` inside the existing leakage-safe
+`Pipeline`, `src/harbor_vale/ml/features.py`), not a role/goal/backstory
+change — PROJECT_PLAN.md's "change deterministic architecture only when a
+real contradiction is found, and report it" applied here, not the prompt-
+iteration guidance. Run 2, with the fix applied, completed fully on the
+first attempt for all three agents (0 guardrail retries) with high-quality
+output: exact real contract column spellings throughout the `FeaturePlan`,
+correct hard-exclusion of `customerID`, two frozen-set model variants with
+defensible rationale, and a `ModelCard` whose limitations explicitly name
+the scale-change risk this entire project is about. No prompt change was
+made or would have been defensible given Run 2's quality — no third run was
+justified, and none was run (2/2 live runs used).
