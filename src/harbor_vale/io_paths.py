@@ -76,6 +76,35 @@ MODEL_CARD_MD = CREW2 / "model_card.md"
 # --- Flow-level artifacts ----------------------------------------------------
 RUN_SUMMARY_JSON = ARTIFACTS / "run_summary.json"
 RUN_METADATA_JSON = ARTIFACTS / "run_metadata.json"
+FLOW_DIAGRAM_HTML = DOCS / "flow_diagram.html"
+
+
+def run_workspace(run_id: str) -> Path:
+    """The gitignored, run-scoped scratch directory for one Flow run
+    (``runs/<run_id>/``) — Internal Gate 8.4/8.10's home for the run-scoped
+    handoff snapshot and the ``--replay-plans`` workspace. Never a location
+    any committed artifact lives in permanently; `runs/` is git-ignored
+    wholesale (see `.gitignore`)."""
+    if not run_id:
+        raise ValueError("run_id must be a non-empty string")
+    return RUNS / run_id
+
+
+def handoff_snapshot_dir(run_id: str) -> Path:
+    """The run-scoped, exact-byte copy of Crew 1's four final artifacts
+    (PROJECT_PLAN.md §H Internal Gate 8.4): the files the Phase 4 gate
+    validates AND — if the gate passes — the exact files Crew 2 is bound to.
+    Fault injection (Gate 8.5) mutates only the CSV inside this directory,
+    never `artifacts/crew1/*`."""
+    return run_workspace(run_id) / "handoff"
+
+
+def replay_workspace(run_id: str) -> Path:
+    """The run-scoped workspace `--replay-plans` (Gate 8.10) writes its
+    rebuilt deterministic artifacts into. Never `artifacts/crew1/` or
+    `artifacts/crew2/` — replay must never overwrite a real production run's
+    committed output."""
+    return run_workspace(run_id) / "replay"
 
 # Directories the pipeline writes into. Source dirs are deliberately excluded —
 # this helper only ever creates *output* locations.

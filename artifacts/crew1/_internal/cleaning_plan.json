@@ -4,7 +4,7 @@
       "op": "rename",
       "old_name": "Churn",
       "new_name": "churn",
-      "reason": "The target column must be named 'churn' in lowercase to meet downstream requirements."
+      "reason": "The target column must be renamed to 'churn' in lowercase to meet downstream requirements."
     },
     {
       "op": "standardize_category",
@@ -13,26 +13,26 @@
         "Yes": "1",
         "No": "0"
       },
-      "reason": "The churn column is currently encoded as 'Yes'/'No' and needs to be standardized to '1'/'0' for binary classification."
+      "reason": "The 'churn' column needs to be standardized from 'Yes'/'No' to '1'/'0' for binary encoding."
     },
     {
       "op": "cast",
       "column": "churn",
       "target_dtype": "int64",
-      "reason": "After standardizing the churn column, it needs to be cast to int64 to ensure it is in the correct format for analysis."
+      "reason": "The 'churn' column must be cast to int64 to ensure it is in the correct format for analysis."
     },
     {
       "op": "cast",
       "column": "TotalCharges",
       "target_dtype": "float64",
-      "reason": "TotalCharges is currently a string type due to some non-numeric values; it should be converted to float64 for numerical analysis."
+      "reason": "The 'TotalCharges' column is currently a string due to non-numeric values; it should be cast to float64 for numerical operations."
     },
     {
-      "op": "clip",
-      "column": "MonthlyCharges",
-      "min": 18.25,
-      "max": 118.75,
-      "reason": "MonthlyCharges should be clipped to its observed min and max values to ensure data integrity and prevent outliers."
+      "op": "impute",
+      "column": "TotalCharges",
+      "strategy": "constant",
+      "value": "0",
+      "reason": "The 'TotalCharges' column has blank strings that should be replaced with 0, as new customers with no charges legitimately have zero total charges."
     }
   ]
 }

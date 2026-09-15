@@ -12,36 +12,34 @@ This model is intended for use by customer retention teams to identify customers
 ## Out of scope
 
 
-- Using the model for purposes outside of customer churn prediction, such as financial forecasting or market analysis.
+- Using the model for purposes outside of customer churn prediction, such as financial forecasting.
 
-- Applying the model to datasets that do not conform to the same structure or feature set.
+- Applying the model to datasets not aligned with the training data characteristics.
 
 
 
 ## Training data summary
 
-The training data consists of 7043 customer records with features including demographic information, service usage, and billing details. The target variable is binary, indicating whether a customer has churned.
+The training data consists of 7043 customer records with 21 features, including demographic information and service usage metrics. The target variable is binary, indicating whether a customer has churned.
 
 ## Metrics (machine-verified against `experiments.json`)
 
 | Metric | Split | Variant | Value |
 |---|---|---|---|
-| roc_auc | test | Logistic Regression Baseline | 0.8495 |
-| pr_auc | test | Logistic Regression Baseline | 0.6684 |
-| f1 | test | Logistic Regression Baseline | 0.6195 |
-| precision | test | Logistic Regression Baseline | 0.5068 |
-| recall | test | Logistic Regression Baseline | 0.7968 |
-| accuracy | test | Logistic Regression Baseline | 0.7402 |
+| roc_auc | test | Logistic Regression Base | 0.8478 |
+| pr_auc | test | Logistic Regression Base | 0.6658 |
+| f1 | test | Logistic Regression Base | 0.6176 |
+| precision | test | Logistic Regression Base | 0.5042 |
+| recall | test | Logistic Regression Base | 0.7968 |
+| accuracy | test | Logistic Regression Base | 0.7381 |
 
 
 ## Limitations
 
 
-- The model assumes that the dataset's 'customers' and 'churn this quarter' framing is treated as a single-snapshot cross-section, which may not capture temporal changes in customer behavior.
+- The model assumes the measurement scale for monetary columns remains constant; any upstream changes in currency or scale would invalidate predictions.
 
-- The model assumes the measurement scale for monetary values remains constant, and any upstream changes in currency or scale would invalidate its predictions.
-
-- Fairness and bias metrics were not measured, which limits the understanding of the model's performance across different demographic groups.
+- Fairness and bias metrics were not measured; therefore, the model's performance across different demographic groups is unknown.
 
 
 ## Ethical considerations
@@ -49,7 +47,7 @@ The training data consists of 7043 customer records with features including demo
 
 - The model should be used responsibly to avoid discriminatory practices in customer retention efforts.
 
-- Transparency in how the model's predictions are used is essential to maintain customer trust.
+- Transparency with customers regarding the use of their data for predictive modeling is essential.
 
 
 ## Contract dependencies
@@ -61,9 +59,9 @@ The training data consists of 7043 customer records with features including demo
 ## Monitoring recommendations
 
 
-- Regularly monitor the model's performance metrics to detect any drift in accuracy or other key performance indicators.
+- Regularly monitor model performance metrics to detect any drift in accuracy or other key performance indicators.
 
-- Implement a feedback loop to capture the outcomes of retention strategies based on model predictions to refine future iterations.
+- Implement a feedback loop to update the model with new data and retrain as necessary to maintain performance.
 
 
 ---

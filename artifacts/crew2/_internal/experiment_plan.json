@@ -1,0 +1,27 @@
+{
+  "primary_metric": "roc_auc",
+  "metric_rationale": "Given the observed positive rate of approximately 26.5%, ROC-AUC is appropriate as it evaluates the model's ability to distinguish between churners and non-churners across all thresholds, which is crucial in this imbalanced classification scenario.",
+  "cv_folds": 5,
+  "variants": [
+    {
+      "name": "Logistic Regression Base",
+      "estimator": "logistic_regression",
+      "params": {
+        "C": 1.0,
+        "class_weight": "balanced",
+        "max_iter": 100
+      },
+      "rationale": "Logistic regression provides a straightforward probabilistic interpretation and is effective for binary classification tasks, making it a solid baseline model."
+    },
+    {
+      "name": "Random Forest Classifier",
+      "estimator": "random_forest",
+      "params": {
+        "n_estimators": 100,
+        "max_depth": 5,
+        "min_samples_leaf": 2
+      },
+      "rationale": "Random forests can capture complex interactions between features and are robust to overfitting, making them a strong candidate for improving classification performance in this dataset."
+    }
+  ]
+}

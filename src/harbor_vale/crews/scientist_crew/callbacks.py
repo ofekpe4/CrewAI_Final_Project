@@ -92,6 +92,15 @@ def train_and_evaluate(task_output) -> None:  # noqa: ARG001
         raise RuntimeError("train_and_evaluate: features not built — Task 1's callback did not run first")
 
     plan = ctx.experiment_plan
+
+    # Persist the accepted ExperimentPlan (Phase 8 §Internal Gate 8.10 replay
+    # audit) — the same guardrail-validated plan `--replay-plans` reloads and
+    # re-executes through this exact deterministic training/evaluation path.
+    ctx.internal_dir.mkdir(parents=True, exist_ok=True)
+    (ctx.internal_dir / "experiment_plan.json").write_text(
+        plan.model_dump_json(indent=2), encoding="utf-8"
+    )
+
     split = split_train_test(ctx.feature_X, ctx.feature_y)
     trained_variants = train_all_variants(ctx.feature_preprocessor, plan, split)
     cv_metrics = evaluate_cv_results(trained_variants, split.y_train)
@@ -136,6 +145,16 @@ def render_model_card(task_output) -> None:  # noqa: ARG001
     contract = ensure_contract_loaded(ctx)
     degraded_reason = ctx.model_card_degraded_reason if ctx.model_card_degraded else None
     card = None if ctx.model_card_degraded else ctx.model_card
+
+    # Persist the accepted ModelCard (Phase 8 §Internal Gate 8.10 replay
+    # audit). A degraded run has no valid ModelCard to persist (§G.3's
+    # forced-accept leaves ctx.model_card None) — nothing is written then,
+    # the same accepted limitation `render_eda_and_insights` documents.
+    if card is not None:
+        ctx.internal_dir.mkdir(parents=True, exist_ok=True)
+        (ctx.internal_dir / "model_card.json").write_text(
+            card.model_dump_json(indent=2), encoding="utf-8"
+        )
 
     render_model_card_markdown(
         card=card,

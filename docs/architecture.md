@@ -489,6 +489,60 @@ above, not the "just use zero arguments" escape hatch Crew 1 took.
 
 ---
 
+## Addendum (Phase 8) — `Flow[T]` subclassing narrows `initial_state` to
+## `type[T]` only, and `.plot()`'s `filename` is basename-only
+
+Two findings verified directly against the installed, pinned
+`crewai==1.15.20` while wiring `flow/pipeline_flow.py::HarborValeFlow`
+(§11's own spike note already correctly anticipated the framework-added
+`id` field — these are two additional, narrower findings the spike did not
+need to exercise).
+
+### Finding 4 — `HarborValeFlow(initial_state=PipelineState(...))` is
+### rejected; seed CLI-facing state fields via `self.state.<field> = ...`
+### right after `super().__init__()` instead
+
+`Flow.initial_state` is declared as `Annotated[type[BaseModel] | type[dict]
+| dict[str, Any] | BaseModel | None, ...]` — a real `BaseModel` *instance*
+is one of the allowed union members. But once a subclass specializes the
+generic (`class HarborValeFlow(Flow[PipelineState])`), constructing
+`HarborValeFlow(initial_state=PipelineState(fault_injection=...))` raises
+`pydantic_core.ValidationError: initial_state — Input should be a subclass
+of PipelineState [type=is_subclass_of]` — the specialized field validator
+only accepts the union's `type[T]` member, not a `T` instance, even though
+`Flow._create_initial_state`'s own runtime logic has a live branch for
+`isinstance(init_state, BaseModel)`. The fix used here: `HarborValeFlow`
+takes plain constructor kwargs (`fault_injection`, `validate_only`,
+`replay_plans`, `dataset_path`) and assigns them onto `self.state` right
+after `super().__init__()` returns — `self.state` already exists by then
+(a fresh `PipelineState()` built from the class-level `initial_state: type
+= PipelineState` default), and `PipelineState` is a plain mutable model, so
+direct attribute assignment is immediate and reliable. `kickoff(inputs=...)`
+(§11's own documented mechanism) remains available as CrewAI's supported
+alternative; it was not needed here.
+
+### Finding 5 — `Flow.plot(filename=...)` always writes into a fresh OS
+### temp directory; `filename` is a basename, never a destination path
+
+`crewai.flow.visualization.renderers.interactive.render_interactive`'s own
+docstring says so explicitly ("filename: Output HTML filename (basename
+only, no path)") — verified by calling `HarborValeFlow().plot(filename=
+"docs/flow_diagram.html")` and finding the returned absolute path pointed
+into `$TMPDIR`, with `docs/flow_diagram.html` never created. Three sibling
+files are always written together (`<basename>.html` + `_style.css` +
+`_script.js`), cross-referenced by relative path. `flow.generate_flow_diagram()`
+copies all three from the temp directory into `docs/` so the artifact is a
+real, committable, self-contained file — documented in that function's own
+docstring rather than silently worked around. The renderer also logs (to
+stderr, non-fatal) that a `@router`'s string-labeled event edges
+(`"gate_passed"`/`"gate_failed"`/`"validation_only_complete"`) cannot be
+statically inferred for the diagram — a real, verified limitation of static
+visualization for dynamic route labels, not a defect in the Flow's own
+graph (already exhaustively proven correct by `tests/unit/test_pipeline_flow.py`,
+zero LLM calls).
+
+---
+
 ## Spike status
 
 The Phase 1 spike files `spike/task_1_1_output_pydantic.py` …
