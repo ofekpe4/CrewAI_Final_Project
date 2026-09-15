@@ -214,7 +214,7 @@ class ContractDraft(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def validate_contract_draft(output) -> Tuple[bool, Any]:
+def validate_contract_draft(output, *, clean_columns: "set[str] | None" = None) -> Tuple[bool, Any]:
     """Parse and validate a `ContractDraft` (§D.3 point 7).
 
     Accepts, in order of preference: a CrewAI `TaskOutput`-shaped object
@@ -232,6 +232,26 @@ def validate_contract_draft(output) -> Tuple[bool, Any]:
     `ContractDraft`'s own field/model validators, so catching
     `pydantic.ValidationError` here is a complete, single-source-of-truth
     check rather than a second, divergent copy of the same rules.
+
+    Args:
+        clean_columns: the **real** `clean_data.csv` column names (§D.3
+            point 7: "כיסוי מלא — כל עמודה ב-clean_data.csv חייבת הצהרה").
+            Defaults to `None` ONLY so this function's signature stays
+            constructible as a bare `Task(guardrail=...)` (CrewAI 1.15.20
+            only counts REQUIRED parameters against its "exactly one
+            parameter" rule — docs/architecture.md's Phase 5 addendum). When
+            `None`, the coverage check is skipped (Phase 3/5 callers that
+            validate a draft with no real CSV yet, e.g.
+            `tests/fixtures/build_example_contract.py`, keep working
+            unchanged). Phase 6+ wraps this function in a one-argument
+            closure per `Task` instance that supplies the real clean-data
+            column set, e.g.
+            `lambda output: validate_contract_draft(output, clean_columns=this_run's_clean_columns)`.
+            This is a fail-fast, guardrail-level echo of the identical check
+            `contract/builder.py.build_contract` already performs
+            authoritatively at build time — catching a coverage mismatch
+            here saves a wasted build attempt and gives the agent retry
+            feedback instead of a hard crash.
 
     Returns:
         `(True, ContractDraft)` on success.
@@ -253,5 +273,23 @@ def validate_contract_draft(output) -> Tuple[bool, Any]:
         return False, f"ContractDraft failed schema validation: {exc}"
     except Exception as exc:  # noqa: BLE001 — a guardrail must never raise
         return False, f"ContractDraft could not be parsed: {exc}"
+
+    if clean_columns is not None:
+        target_name = draft.target.name
+        declared_feature_names = {c.name for c in draft.columns}
+        csv_feature_names = set(clean_columns) - {target_name}
+        if declared_feature_names != csv_feature_names:
+            missing = csv_feature_names - declared_feature_names
+            extra = declared_feature_names - csv_feature_names
+            detail = []
+            if missing:
+                detail.append(f"clean_data.csv columns with no draft declaration: {sorted(missing)}")
+            if extra:
+                detail.append(f"draft declares columns absent from clean_data.csv: {sorted(extra)}")
+            return False, "ContractDraft column coverage does not match clean_data.csv: " + "; ".join(detail)
+        if target_name not in clean_columns:
+            return False, (
+                f"ContractDraft declares target {target_name!r}, which is not a column in clean_data.csv"
+            )
 
     return True, draft

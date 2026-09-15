@@ -1,0 +1,970 @@
+{
+  "contract_version": "1.0.0",
+  "created_at": "2026-09-15T07:27:11Z",
+  "created_by": "crew1.contract_architect",
+  "run_id": "20260915T072625Z-f10fb32e",
+  "dataset_name": "telco_customer_churn",
+  "source_documentation_url": "https://github.com/IBM/telco-customer-churn-on-icp4d",
+  "target": {
+    "name": "churn",
+    "task_type": "binary_classification",
+    "constraints": {
+      "dtype": {
+        "expected": "int64",
+        "justification": "The churn column is a binary indicator of whether a customer has left the company, confirmed by the source documentation."
+      },
+      "closed_domain": {
+        "values": [
+          "0",
+          "1"
+        ],
+        "justification": "The churn column represents a binary outcome: '0' for customers who did not churn and '1' for those who did.",
+        "severity": "ERROR"
+      },
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a churn status recorded."
+      }
+    },
+    "observed": {
+      "positive_rate": 0.2653698707936959,
+      "class_counts": {
+        "0": 5174,
+        "1": 1869
+      }
+    },
+    "drift": null
+  },
+  "required_features": [
+    "customerID",
+    "gender",
+    "SeniorCitizen",
+    "Partner",
+    "Dependents",
+    "tenure",
+    "PhoneService",
+    "MultipleLines",
+    "InternetService",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+    "Contract",
+    "PaperlessBilling",
+    "PaymentMethod",
+    "MonthlyCharges",
+    "TotalCharges"
+  ],
+  "excluded_features": [],
+  "primary_key": {
+    "columns": [
+      "customerID"
+    ],
+    "constraints": {
+      "unique": {
+        "value": true,
+        "justification": "Each customerID uniquely identifies a customer in the dataset."
+      }
+    }
+  },
+  "columns": [
+    {
+      "name": "customerID",
+      "semantic_type": "identifier",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 7043,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The customerID is a unique identifier for each customer."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a unique identifier."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": null,
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "gender",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Male": 0.504756495811444,
+          "Female": 0.495243504188556
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The gender column contains categorical values representing the gender of the customer."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a gender recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Male",
+            "Female"
+          ],
+          "justification": "The gender column has a fixed set of values representing gender.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "SeniorCitizen",
+      "semantic_type": "binary",
+      "observed": {
+        "dtype": "int64",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.1621468124378816,
+        "median": 0.0,
+        "p05": 0.0,
+        "p95": 1.0,
+        "std": 0.3686116056100131,
+        "decimal_places_max": 0,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "int64",
+          "justification": "The SeniorCitizen column is a binary indicator of whether a customer is a senior citizen."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a senior citizen status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "0",
+            "1"
+          ],
+          "justification": "The SeniorCitizen column has a fixed set of values indicating senior status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "Partner",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.5169672014766434,
+          "Yes": 0.4830327985233565
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The Partner column contains categorical values indicating whether the customer has a partner."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a partner status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No"
+          ],
+          "justification": "The Partner column has a fixed set of values indicating partner status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "Dependents",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.7004117563538265,
+          "Yes": 0.2995882436461735
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The Dependents column contains categorical values indicating whether the customer has dependents."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a dependents status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No"
+          ],
+          "justification": "The Dependents column has a fixed set of values indicating dependents status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "tenure",
+      "semantic_type": "numeric",
+      "observed": {
+        "dtype": "int64",
+        "null_count": 0,
+        "unique_count": 73,
+        "min": 0.0,
+        "max": 72.0,
+        "mean": 32.37114865824223,
+        "median": 29.0,
+        "p05": 1.0,
+        "p95": 72.0,
+        "std": 24.55948102309446,
+        "decimal_places_max": 0,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "int64",
+          "justification": "The tenure column represents the number of months a customer has been with the company."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a tenure recorded."
+        },
+        "unit": {
+          "value": "months",
+          "evidence": "The source documentation explicitly states that tenure is measured in months.",
+          "confidence": "high"
+        },
+        "business_range": {
+          "min": 0.0,
+          "max": 72.0,
+          "justification": "Tenure cannot be negative and is capped at 72 months, which is plausible for a telecom service."
+        },
+        "closed_domain": null,
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "PhoneService",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Yes": 0.9031662643759761,
+          "No": 0.09683373562402385
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The PhoneService column contains categorical values indicating whether the customer has phone service."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a phone service status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No"
+          ],
+          "justification": "The PhoneService column has a fixed set of values indicating phone service status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "MultipleLines",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.48132897912821243,
+          "Yes": 0.42183728524776376,
+          "No phone service": 0.09683373562402385
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The MultipleLines column contains categorical values indicating whether the customer has multiple lines."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a multiple lines status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No phone service"
+          ],
+          "justification": "The MultipleLines column has a fixed set of values indicating multiple lines status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "InternetService",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Fiber optic": 0.4395854039471816,
+          "DSL": 0.34374556297032516,
+          "No": 0.21666903308249325
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The InternetService column contains categorical values indicating the type of internet service."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have an internet service status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "DSL",
+            "Fiber optic",
+            "No"
+          ],
+          "justification": "The InternetService column has a fixed set of values indicating internet service type.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "OnlineSecurity",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.4966633536845094,
+          "Yes": 0.2866676132329973,
+          "No internet service": 0.21666903308249325
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The OnlineSecurity column contains categorical values indicating whether the customer has online security."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have an online security status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "The OnlineSecurity column has a fixed set of values indicating online security status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "OnlineBackup",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.43844952435041884,
+          "Yes": 0.3448814425670879,
+          "No internet service": 0.21666903308249325
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The OnlineBackup column contains categorical values indicating whether the customer has online backup."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have an online backup status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "The OnlineBackup column has a fixed set of values indicating online backup status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "DeviceProtection",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.43944341899758627,
+          "Yes": 0.3438875479199205,
+          "No internet service": 0.21666903308249325
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The DeviceProtection column contains categorical values indicating whether the customer has device protection."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a device protection status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "The DeviceProtection column has a fixed set of values indicating device protection status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "TechSupport",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.4931137299446259,
+          "Yes": 0.2902172369728809,
+          "No internet service": 0.21666903308249325
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The TechSupport column contains categorical values indicating whether the customer has tech support."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a tech support status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "The TechSupport column has a fixed set of values indicating tech support status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "StreamingTV",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.3989777083629135,
+          "Yes": 0.38435325855459324,
+          "No internet service": 0.21666903308249325
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The StreamingTV column contains categorical values indicating whether the customer has streaming TV."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a streaming TV status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "The StreamingTV column has a fixed set of values indicating streaming TV status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "StreamingMovies",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "No": 0.39542808462303,
+          "Yes": 0.3879028822944768,
+          "No internet service": 0.21666903308249325
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The StreamingMovies column contains categorical values indicating whether the customer has streaming movies."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a streaming movies status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No",
+            "No internet service"
+          ],
+          "justification": "The StreamingMovies column has a fixed set of values indicating streaming movies status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "Contract",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 3,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Month-to-month": 0.5501916796819537,
+          "Two year": 0.24066448956410622,
+          "One year": 0.20914383075394008
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The Contract column contains categorical values indicating the type of contract."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a contract type recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Month-to-month",
+            "One year",
+            "Two year"
+          ],
+          "justification": "The Contract column has a fixed set of values indicating contract type.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "PaperlessBilling",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 2,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Yes": 0.5922192247621753,
+          "No": 0.4077807752378248
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The PaperlessBilling column contains categorical values indicating whether the customer has paperless billing."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a paperless billing status recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Yes",
+            "No"
+          ],
+          "justification": "The PaperlessBilling column has a fixed set of values indicating paperless billing status.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "PaymentMethod",
+      "semantic_type": "categorical",
+      "observed": {
+        "dtype": "str",
+        "null_count": 0,
+        "unique_count": 4,
+        "min": null,
+        "max": null,
+        "mean": null,
+        "median": null,
+        "p05": null,
+        "p95": null,
+        "std": null,
+        "decimal_places_max": null,
+        "value_distribution": {
+          "Electronic check": 0.3357944057929859,
+          "Mailed check": 0.22887973874769274,
+          "Bank transfer (automatic)": 0.21922476217520942,
+          "Credit card (automatic)": 0.2161010932841119
+        }
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "str",
+          "justification": "The PaymentMethod column contains categorical values indicating the method of payment."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a payment method recorded."
+        },
+        "unit": null,
+        "business_range": null,
+        "closed_domain": {
+          "values": [
+            "Electronic check",
+            "Mailed check",
+            "Bank transfer (automatic)",
+            "Credit card (automatic)"
+          ],
+          "justification": "The PaymentMethod column has a fixed set of values indicating payment methods.",
+          "severity": "ERROR"
+        },
+        "scale_drift": null
+      }
+    },
+    {
+      "name": "MonthlyCharges",
+      "semantic_type": "monetary",
+      "observed": {
+        "dtype": "float64",
+        "null_count": 0,
+        "unique_count": 1585,
+        "min": 18.25,
+        "max": 118.75,
+        "mean": 64.76169246059918,
+        "median": 70.35,
+        "p05": 19.65,
+        "p95": 107.4,
+        "std": 30.090047097678493,
+        "decimal_places_max": 2,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "float64",
+          "justification": "The MonthlyCharges column represents the customer's current total monthly charge for all their services."
+        },
+        "nullable": {
+          "value": false,
+          "justification": "Every customer must have a monthly charge recorded."
+        },
+        "unit": {
+          "value": "currency_unspecified",
+          "evidence": "The source documentation does not specify a currency for MonthlyCharges.",
+          "confidence": "high"
+        },
+        "business_range": {
+          "min": 18.25,
+          "max": 118.75,
+          "justification": "Monthly charges cannot be negative and are capped at 118.75 based on observed data."
+        },
+        "closed_domain": null,
+        "scale_drift": {
+          "median_rel_tolerance": 0.1,
+          "justification": "A significant change in monthly charges would indicate a potential scale change.",
+          "severity": "WARN"
+        }
+      }
+    },
+    {
+      "name": "TotalCharges",
+      "semantic_type": "monetary",
+      "observed": {
+        "dtype": "float64",
+        "null_count": 11,
+        "unique_count": 6530,
+        "min": 18.8,
+        "max": 8684.8,
+        "mean": 2283.300440841866,
+        "median": 1397.475,
+        "p05": 49.605,
+        "p95": 6923.589999999999,
+        "std": 2266.771361883145,
+        "decimal_places_max": 2,
+        "value_distribution": null
+      },
+      "constraints": {
+        "dtype": {
+          "expected": "float64",
+          "justification": "The TotalCharges column represents the total amount charged to the customer."
+        },
+        "nullable": {
+          "value": true,
+          "justification": "TotalCharges can be null for new customers who have not yet been billed."
+        },
+        "unit": {
+          "value": "currency_unspecified",
+          "evidence": "The source documentation does not specify a currency for TotalCharges.",
+          "confidence": "high"
+        },
+        "business_range": {
+          "min": 0.0,
+          "max": 8684.8,
+          "justification": "Total charges cannot be negative and are capped at 8684.8 based on observed data."
+        },
+        "closed_domain": null,
+        "scale_drift": {
+          "median_rel_tolerance": 0.1,
+          "justification": "A significant change in total charges would indicate a potential scale change.",
+          "severity": "WARN"
+        }
+      }
+    }
+  ],
+  "integrity": {
+    "clean_data_sha256": "0ceb4979f3ba781bb854e1f23bf7efc13178a07d28808e316032ec8e785d8b38",
+    "row_count": 7043,
+    "column_count": 21,
+    "column_order": [
+      "customerID",
+      "gender",
+      "SeniorCitizen",
+      "Partner",
+      "Dependents",
+      "tenure",
+      "PhoneService",
+      "MultipleLines",
+      "InternetService",
+      "OnlineSecurity",
+      "OnlineBackup",
+      "DeviceProtection",
+      "TechSupport",
+      "StreamingTV",
+      "StreamingMovies",
+      "Contract",
+      "PaperlessBilling",
+      "PaymentMethod",
+      "MonthlyCharges",
+      "TotalCharges",
+      "churn"
+    ]
+  },
+  "assumptions": [
+    "The dataset's 'customers' and 'churn this quarter' framing is treated as a single-snapshot cross-section (one row per customer, one observation point).",
+    "The encoding of binary flags is consistent across columns, with '0' and '1' representing 'No' and 'Yes' respectively."
+  ],
+  "validation_policy": {
+    "on_unknown_column": "warn",
+    "on_missing_column": "error",
+    "on_integrity_mismatch": "error",
+    "scale_change_ratio_hints": [
+      0.001,
+      0.01,
+      0.1,
+      10.0,
+      100.0,
+      1000.0
+    ]
+  }
+}

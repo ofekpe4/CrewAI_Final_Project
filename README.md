@@ -5,7 +5,7 @@ Two CrewAI crews separated by a **machine-enforced dataset contract** and a
 *seam*: a contract that one crew writes and the other must honour, and a Flow that
 checks it before anything downstream is allowed to run.
 
-> **Status: Phases 0–5 complete.**
+> **Status: Phases 0–6 complete.**
 > The environment and core infrastructure exist and are tested (Phase 0). The
 > CrewAI execution-pattern spike is resolved (Phase 1): **Pattern A** — one
 > `Crew` of 3 sequential `Task`s per crew, each with `output_pydantic` +
@@ -25,7 +25,16 @@ checks it before anything downstream is allowed to run.
 > `sklearn`-based train/evaluate/winner-selection — proven together on the
 > **real** 7,043-row Telco dataset with hardcoded (not agent-produced) plans,
 > **zero LLM calls**, and verified double-run byte-identical reproducibility.
-> **The crews, the Flow, and the Streamlit app are *not* implemented yet.**
+> **Crew 1 (Data Analyst) is now implemented and live-run-verified (Phase
+> 6)**: three real CrewAI agents — Data Quality Inspector, EDA & Insights
+> Analyst, Data Contract Architect — wired as one `Crew` (Pattern A,
+> `Process.sequential`), each producing a guardrail-validated structured plan
+> that deterministic Python (never the LLM) executes into the four required
+> artifacts. Critical-agent failure halts the pipeline with no fallback;
+> narrative-agent failure degrades visibly instead. A real, live run against
+> the actual OpenAI API and the real Telco dataset produced a
+> `dataset_contract.json` that **passes the Phase 4 gate with zero errors**.
+> **Crew 2, the Flow, and the Streamlit app are *not* implemented yet.**
 > See [Project status](#project-status) below.
 
 ---
@@ -81,7 +90,7 @@ pipeline itself is built yet — it is the target described in `PROJECT_PLAN.md`
 | **Python** | **3.12.x**, CPython, **not** from Anaconda/Conda. The project is developed on Homebrew Python `3.12.14`; any non-Conda 3.12 works. CrewAI `1.15.20` supports `>=3.10,<3.14`; 3.12 was chosen to reduce install risk. |
 | **OS** | Developed on macOS (Apple Silicon). Linux should work; not yet tested. |
 | **Anaconda / Conda** | **Not used and not required.** Do not install this project's dependencies into a Conda `base` or global environment, even if your shell shows `(base)`. |
-| **LLM API key** | **Not needed for Phase 0–5.** Crew execution (Phase 6+) will need an `OPENAI_API_KEY`; see [Configuration](#configuration). |
+| **LLM API key** | **Not needed for Phase 0–5 or for any mocked/offline test.** A real `OPENAI_API_KEY` is needed only to run Crew 1 live (`scripts/run_crew1.py`); see [Configuration](#configuration). |
 
 ---
 
@@ -179,7 +188,8 @@ CrewAI_Final_Project/
 │   ├── ml/                      # features.py · train.py · evaluate.py  [implemented — Phase 5]
 │   ├── templates/                # eda_report.html · insights.md · styles.css (Jinja2) [implemented — Phase 5]
 │   ├── demo/fault_injection.py  # deterministic mutation helpers (tests-only) [implemented — Phase 4]
-│   ├── crews/{analyst_crew,scientist_crew}/                            # (placeholders — Phase 6–7)
+│   ├── crews/analyst_crew/                                              # Crew 1 [implemented — Phase 6]
+│   ├── crews/scientist_crew/                                            # (placeholder — Phase 7)
 │   └── flow/                                                           # (placeholder — Phase 8)
 │
 ├── app/                        # Streamlit UI                          (placeholder — Phase 9)
@@ -231,6 +241,7 @@ python tests/unit/test_feature_builder.py                                  # Pha
 python tests/unit/test_model_selection.py                                   # Phase 5 — train/evaluate determinism
 python tests/unit/test_plans_validation.py                                   # Phase 5 — guardrail parser contract
 python tests/unit/test_hardcoded_e2e.py                                       # Phase 5 — full E2E on real data ⭐ (~35s)
+python tests/unit/test_analyst_crew.py                                          # Phase 6 — Crew 1, scripted LLM, zero API key ⭐
 ```
 
 Each prints `PASS`/`FAIL` per check and exits non-zero on any failure. Once
@@ -377,21 +388,73 @@ wrapping is Phase 6–7). Zero LLM/Agent/Task/Crew/Flow anywhere.
 - [x] 147 new test functions across 8 files, plus every Phase 0–4 test
       still green.
 
+### Done — Phase 6: Crew 1 — Data Analyst Crew ⭐
+
+**The first phase with real CrewAI agents and a real OpenAI-backed LLM.**
+One `Crew`, three `Agent`s, three `Task`s, `Process.sequential` (Pattern A,
+Phase 1) — `src/harbor_vale/crews/analyst_crew/`.
+
+- [x] **Data Quality Inspector** 🔴 critical — reads the raw dataset's
+      deterministic profile, produces a guardrail-validated `CleaningPlan`
+      (Phase 5's closed 7-operation vocabulary); a deterministic callback
+      executes it, writes `clean_data.csv`, and computes the clean profile
+      + EDA statistics/figures downstream tasks need.
+- [x] **EDA & Insights Analyst** 🟡 narrative — interprets measured EDA
+      statistics into an `InsightsDoc`; every `evidence_stat_key` is
+      mechanically checked against the real statistics dictionary. On
+      exhausted retries, a visible `⚠️ Narrative unavailable` degraded
+      banner renders instead of a pipeline halt — proven both by mocked
+      tests and by the real live acceptance run.
+- [x] **Data Contract Architect** 🔴 critical ⭐ — the most important agent:
+      semantic judgement only (unit, closed domain, business range,
+      exclusion classification), never a measured number. The Phase 5
+      `ContractDraft` guardrail is extended with a real clean-data
+      column-coverage check; a deterministic callback (`contract/builder.py`)
+      merges the validated draft with measured facts (SHA256, dtypes,
+      statistics) into `dataset_contract.json` — the agent never writes the
+      file itself.
+- [x] **Critical vs. narrative failure policy, proven twice**: a critical
+      agent's exhausted guardrail halts Crew 1 with
+      `status="halted_agent_failure"` and **no fallback**, preserving the
+      rejected output under `artifacts/crew1/_internal/`; the narrative
+      agent's exhausted guardrail force-accepts (a mechanism empirically
+      verified against the real pinned `crewai==1.15.20` — see
+      `docs/architecture.md`'s Phase 6 addendum) so Crew 1 still completes
+      and Task 3 still runs.
+- [x] **49 mocked/offline tests** (`tests/unit/test_analyst_crew.py`) —
+      every LLM call served by a scripted `BaseLLM`, **zero API key
+      required, zero network** — covering Pattern A structure, the happy
+      path, both critical-agent halts, and the narrative fallback.
+- [x] **A real, live acceptance run** against the actual OpenAI API
+      (`gpt-4o-mini`, `temperature=0.1`) and the real 7,043-row Telco
+      dataset produced all four required artifacts, and the generated
+      `dataset_contract.json` **passed the Phase 4 validation gate with
+      zero errors and zero warnings** — proof the whole "Agent Plans,
+      Python Executes" chain works end-to-end with a real LLM, not just a
+      script. One documented prompt-design iteration (`docs/agent_design.md`,
+      `working flow/2026-09-15_session-23.md`) between the first and second
+      live run fixed two real issues: an evidence-key confusion between two
+      different measured-statistics dictionaries, and a JSON schema-shape
+      ambiguity (`closed_domain: {"values": null}` vs. `closed_domain: null`).
+- [x] `docs/agent_design.md` — all three agents documented against the
+      Plan's 9-point structure.
+
 ### Not started
 
 Everything else. Specifically **not implemented and not working yet**:
 
-- **Crew 1** (Data Analyst) and **Crew 2** (Data Scientist) (Phases 6–7) —
-  the deterministic tools above exist as plain functions; CrewAI
-  `@tool`/`BaseTool` wrapping and the actual `Agent`/`Task`/`Crew`
-  definitions do not exist yet.
+- **Crew 2** (Data Scientist) (Phase 7) — the deterministic tools exist as
+  plain functions; Crew 2's `Agent`/`Task`/`Crew` definitions do not exist
+  yet.
 - The **Flow** orchestration and failure demo (Phases 8, 10).
 - **Streamlit** app (Phase 9).
 - Any trained **model** actually served, evaluation report, or model card
   as a real production artifact (the Phase 5 proof's model/reports exist
   only in an isolated test workspace, never in `artifacts/`).
 
-There is no runnable pipeline yet. `make run` / `make demo-fail` do not exist.
+There is no full end-to-end pipeline yet (`make run` / `make demo-fail` do not
+exist) — but Crew 1 alone is runnable live: `python scripts/run_crew1.py`
+(needs a real `OPENAI_API_KEY` in `.env`).
 
 ---
 

@@ -1,0 +1,131 @@
+# Crew 1 — Data Analyst Crew — Task definitions (PROJECT_PLAN.md §D.1-D.3,
+# §C.2.2 Pattern A). `output_pydantic`, `guardrail`, `callback`, `context=`
+# are wired in Python (analyst_crew.py) — this file holds only the natural-
+# language description/expected_output every Task also needs.
+
+inspect_cleaning_task:
+  description: >
+    The raw "{dataset_name}" dataset has just been loaded. Call the
+    `profile_dataset` tool to see its deterministic, measured profile — per
+    column: dtype, null count, blank-string count, unique count, and (for
+    numeric columns) min/max/mean/median. Call `preview_sample` to see a
+    handful of real rows if that helps you reason about a specific column.
+
+    Decide exactly what cleaning this dataset needs, and why. You must
+    ground every decision in what the profile/preview actually show — never
+    invent a problem, a column, or a statistic. Consider at minimum:
+    renaming columns to clear snake_case names, any column whose dtype is
+    wrong for what it measures (e.g. a numeric-looking column loaded as
+    text because of a small number of non-numeric placeholder values), and
+    the target column's encoding.
+
+    Two hard technical requirements downstream tooling depends on: the
+    target column (originally named "Churn") MUST end up named exactly
+    `churn` (all lowercase) and encoded as a binary int64 column (0/1) —
+    use standardize_category then cast if it currently reads as Yes/No
+    text.
+
+    Every operation you propose must be one of exactly these seven kinds:
+    drop_duplicates, impute, cast, rename, drop_column, clip,
+    standardize_category — nothing else is possible — and every single one
+    needs a `reason` that a data-quality reviewer would find defensible
+    from the profile alone. You do not decide what UNIT any column is in —
+    that is a later agent's job. You never touch the data yourself; you
+    only produce the plan.
+  expected_output: >
+    A CleaningPlan: a JSON object with a single `operations` field, an
+    ordered list of typed operation objects, each with a `reason`.
+
+eda_insights_task:
+  description: >
+    The dataset has now been cleaned according to the accepted cleaning
+    plan. Call `get_eda_statistics` to see the deterministic statistics
+    computed on the cleaned data (per-column counts/means/medians, and —
+    since the target is binary — churn rate broken down by category for
+    every categorical column). Call `get_numeric_correlations` if a
+    relationship between two numeric columns would strengthen an insight,
+    and `list_eda_figures` to see what charts already exist.
+
+    Produce 5-7 genuinely useful insights — fewer is fine if the evidence
+    does not support more; do not pad the list. For each insight, give a
+    `title`, what you `observation`-ally measured, its
+    `business_implication` (why a retention team should care), a concrete
+    `recommended_action`, and the EXACT statistic-dictionary key
+    (`evidence_stat_key`) your claim rests on.
+
+    CRITICAL rule about `evidence_stat_key`: it MUST be a key that exists,
+    character-for-character, in `get_eda_statistics`'s own returned
+    dictionary — and ONLY that dictionary. `get_numeric_correlations`'s
+    keys (format `col_a__vs__col_b`) are a DIFFERENT dictionary, useful for
+    your own reasoning about which relationships matter, but a correlation
+    key is NEVER a valid `evidence_stat_key` — citing one will get your
+    entire output rejected. If a correlation is genuinely the best evidence
+    for an insight, describe it in the `observation` text instead and back
+    the `evidence_stat_key` field with a real `get_eda_statistics` key
+    (e.g. one of the two columns' own mean/median, or a target-rate-by-
+    category key) that supports the same point.
+
+    You never invent a number, draw a chart, or write raw HTML — you
+    interpret what Python already measured. Also list any `data_caveats` a
+    business reader should know (e.g. an undocumented currency, or that
+    these are observed associations, not causal proof).
+  expected_output: >
+    An InsightsDoc: a JSON object with `headline`, an `insights` list (each
+    with title/observation/business_implication/recommended_action/
+    evidence_stat_key), and a `data_caveats` list.
+
+contract_architect_task:
+  description: >
+    You are writing the Dataset Contract's semantic layer — the interface
+    the Data Scientist crew will trust without ever seeing the raw data.
+    Call `profile_clean_dataset` to see the measured profile of the
+    now-cleaned data, `read_insights_report` to see the prior analyst's
+    interpretation, and `read_source_documentation` for the
+    dataset's actual documented provenance — your ONLY legitimate evidence
+    source for declaring a unit, a closed categorical domain, or a
+    defensible business range.
+
+    For EVERY column in the cleaned dataset (every single one — an
+    undeclared column is a rejected contract) decide: its `semantic_type`;
+    whether its dtype should be constrained; its `unit` (value + evidence +
+    confidence) if and only if you can point to real evidence — otherwise
+    the value must honestly be "currency_unspecified" or "unspecified",
+    never a guessed currency; whether it is `nullable`; whether it has a
+    genuinely `closed_domain` (and if so, exactly which values, with a
+    justification); whether a `business_range` is truly defensible (with a
+    justification — "the profile happens to range from X to Y" is NOT a
+    justification; "a recurring charge cannot be negative" is); and whether
+    it is scale-sensitive (a monetary/scale column a 100x shift should be
+    flagged on).
+
+    CRITICAL schema-shape rule for `unit`, `closed_domain`, `business_range`,
+    and `scale_drift`: each one is EITHER completely absent (set the whole
+    field to `null`, meaning "no constraint declared for this column") OR a
+    complete object with every one of its own required sub-fields filled
+    in with a real value. NEVER a half-filled object — for example, if a
+    numeric column like tenure has no closed set of values, set
+    `"closed_domain": null` directly; do NOT write
+    `"closed_domain": {"values": null, "justification": "..."}` — a `null`
+    inside `values` is a schema violation, not a way to say "not
+    applicable." The same rule applies to `unit`, `business_range`, and
+    `scale_drift`: either the whole object is real and complete, or the
+    field itself is `null`.
+
+    Also declare: the target column and its task type; `required_features`
+    (the columns a model MUST use); `excluded_features` — each with an
+    `exclusion_type` (identifier / target_leakage / redundancy_collinearity
+    / modeling_simplicity / ethical_sensitive) and `enforcement` (hard /
+    advisory). Only call something `target_leakage` if you have an actual
+    temporal or semantic reason it could not legitimately be known at
+    prediction time — a column merely correlating with, or being derivable
+    from, other available features is redundancy_collinearity (advisory),
+    never leakage. State your `assumptions` explicitly (e.g. what an empty
+    value in a given column is assumed to mean).
+
+    You never write dataset_contract.json yourself, and you never invent a
+    min/max/median/row_count/hash — those are measured by Python from the
+    real file, after your semantic draft is accepted.
+  expected_output: >
+    A ContractDraft: a JSON object with `target`, `required_features`,
+    `excluded_features`, `primary_key`, `columns` (one entry per non-target
+    column in the cleaned dataset), and `assumptions`.

@@ -380,6 +380,115 @@ See `src/harbor_vale/plans/cleaning_plan.py`, `insights_doc.py`,
 
 ---
 
+## Addendum (Phase 6) — `task.output.pydantic` cannot be trusted after a
+## successful guardrail, and the narrative-fallback forced-accept mechanism
+
+Discovered wiring Crew 1's three real `Task(guardrail=...)`s against the
+real pinned `crewai==1.15.20` (a scripted `BaseLLM`, no network — the same
+technique as `spike/task_1_2_guardrail_retry.py`). Two related findings that
+change how a Crew 1 (or any future) callback should read a guardrail's
+validated result.
+
+### Finding 1 — a guardrail returning `(True, <bare pydantic model>)` does
+### NOT populate `task.output.pydantic`
+
+`Task._invoke_guardrail_function` (crewai/task.py) only special-cases two
+return shapes for `guardrail_result.result`:
+
+- a `str` → sets `task_output.raw` to it and **re-runs** `_export_output`
+  (i.e. `output_pydantic.model_validate_json`) on it, populating `.pydantic`.
+- a `TaskOutput` → replaces `task_output` wholesale, **without** re-running
+  `_export_output`.
+
+Any other type (including the bare, already-parsed Pydantic model instance
+every `plans/*.validate_*` function in this project returns on success,
+e.g. `(True, CleaningPlan(...))`) falls through **both** branches — `task_output`
+is returned completely unchanged from whatever it was before the guardrail
+ran. Empirically verified: `task.output.pydantic` was `None` after a
+guardrail returned `(True, <ToyNote instance>)`, while returning
+`(True, out.raw)` (a string) correctly populated it.
+
+**A second, independent surprise:** `task.output.pydantic` is **not**
+reliably `None` even before a guardrail's own success on every attempt —
+the Sessions 17-18 finding ("guardrail runs first with `task_output.pydantic
+is None`") was verified only for a task's very *first* attempt. On a
+*retry* attempt, an already-structurally-valid raw response gets exported
+(`_export_output`) **before** the guardrail evaluates it — so `.pydantic`
+can already hold the LLM's own (still semantically wrong) parsed object at
+guardrail-call time on attempt 2+.
+
+**Production rule (binding, applies to every Harbor & Vale guardrail/
+callback, not only Crew 1):** never read `task.output.pydantic` in a
+callback to get "the validated result" — it is unreliable in both
+directions (unset after a real success; possibly set to unvalidated content
+before one). Store the validated object explicitly instead — Crew 1 stores
+it on the run-scoped `Crew1RunContext` (`crews/analyst_crew/runtime.py`)
+from inside the guardrail itself, and every callback reads it from there.
+This does not change what a guardrail should *return* to CrewAI (still
+`(True, data)` / `(False, msg)`, `data` any non-`None` value — CrewAI's own
+retry/exhaustion bookkeeping only cares about `success`); it changes where
+*this project's own code* gets the validated object from.
+
+### Finding 2 — forcing a narrative-agent's guardrail to accept, without
+### raising, on final exhaustion
+
+PROJECT_PLAN.md §D.2 point 9 requires Agent 2's invalid output, after
+`guardrail_max_retries` retries, to produce a **visible degraded fallback**
+— never halt Crew 1, and Agent 3 must still run. Left alone, CrewAI's own
+guardrail-exhaustion behaviour (§5 above) raises a plain `Exception` out of
+`crew.kickoff()` on the final failed attempt, which halts the **entire**
+crew — Task 3 would never run, directly violating §D.2 point 9.
+
+**Empirically verified mechanism:** on the final allowed attempt, if the
+output is still invalid, the guardrail returns `(True, output)` — the
+**same** `TaskOutput` instance it was given as its own argument, completely
+unchanged (not a copy, not a new string, not a reconstructed object).
+Because this hits the `isinstance(guardrail_result.result, TaskOutput)`
+branch, CrewAI accepts it **without** re-running `_export_output` — so this
+is safe even when the LLM's final attempt is structurally broken (not just
+semantically wrong), unlike returning `(True, output.raw)` (a string),
+which WOULD re-trigger `output_pydantic` validation and could raise
+`pydantic.ValidationError` on malformed JSON. Verified end-to-end: the crew
+completes (no exception), the guardrail is invoked exactly
+`guardrail_max_retries + 1` times, and the next `Task` in the sequence runs
+normally afterward.
+
+The forced-accept branch never lets the invalid content reach an artifact:
+the guardrail sets an explicit `ctx.eda_degraded = True` +
+`ctx.eda_degraded_reason` on the `Crew1RunContext` in the same call, and the
+callback renders from those fields (and `ctx.insights_doc`, left `None`),
+never from the accepted-but-ignored `TaskOutput`. This is the general
+pattern for any future "critical vs. narrative" agent split in this
+project: only a NARRATIVE agent's guardrail may use this forced-accept
+mechanism; a CRITICAL agent's guardrail must always return `(False, msg)`
+on invalid input, letting CrewAI's own exhaustion-exception fire, which the
+caller (`run_analyst_crew`) catches and reports as
+`status="halted_agent_failure"`.
+
+### Finding 3 — a named `Literal` type alias breaks `@tool` argument-schema
+### construction
+
+A CrewAI `@tool`-decorated function argument typed with a **module-level
+named** `Literal` alias (e.g. `Crew1ArtifactName = Literal["x"]`, then
+`def f(name: Crew1ArtifactName)`) fails at the first actual tool-schema
+build with `pydantic_core._pydantic_core.PydanticUndefinedAnnotation:
+'Crew1ArtifactName' is not fully defined` — CrewAI's tool-arg schema
+builder does not resolve a module-level type alias into the dynamically
+constructed per-tool Pydantic model's namespace. **Two independent fixes
+both work:** inlining the `Literal[...]` directly in the parameter
+annotation instead of via a named alias; or removing
+`from __future__ import annotations` from the tool module (stringized
+annotations compound the same resolution gap). Crew 1's actual design
+avoided the whole class of Literal-arg tool-schema risk by preferring a
+zero-argument, run-bound tool (`read_insights_report`) over a
+single-value-enum argument — simpler, and strictly more restrictive per
+§G.0's "no unconstrained arbitrary path input" principle. Documented here
+because a future CrewAI tool with a genuinely multi-valued `Literal`
+argument (e.g. Phase 7's handoff-name tool) will need one of the two fixes
+above, not the "just use zero arguments" escape hatch Crew 1 took.
+
+---
+
 ## Spike status
 
 The Phase 1 spike files `spike/task_1_1_output_pydantic.py` …

@@ -1,0 +1,38 @@
+{
+  "operations": [
+    {
+      "op": "rename",
+      "old_name": "Churn",
+      "new_name": "churn",
+      "reason": "The target column must be named 'churn' in lowercase to meet downstream requirements."
+    },
+    {
+      "op": "standardize_category",
+      "column": "churn",
+      "mapping": {
+        "Yes": "1",
+        "No": "0"
+      },
+      "reason": "The churn column needs to be standardized from 'Yes'/'No' to '1'/'0' for binary encoding."
+    },
+    {
+      "op": "cast",
+      "column": "churn",
+      "target_dtype": "int64",
+      "reason": "The churn column must be cast to int64 to ensure it is in the correct format for analysis."
+    },
+    {
+      "op": "cast",
+      "column": "TotalCharges",
+      "target_dtype": "float64",
+      "reason": "TotalCharges is currently a string due to non-numeric placeholders; it should be cast to float64 for numerical operations."
+    },
+    {
+      "op": "clip",
+      "column": "MonthlyCharges",
+      "min": 18.25,
+      "max": 118.75,
+      "reason": "MonthlyCharges should be clipped to its observed min and max values to ensure data integrity."
+    }
+  ]
+}
