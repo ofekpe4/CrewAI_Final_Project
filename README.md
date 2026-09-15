@@ -366,7 +366,15 @@ wrapping is Phase 6–7). Zero LLM/Agent/Task/Crew/Flow anywhere.
       for every artifact including figures and `model.joblib` itself — the
       one field allowed (and confirmed) to differ is the validation
       report's own `validated_at` timestamp.
-- [x] 130 new test functions across 7 files, plus every Phase 0–4 test
+- [x] **`plans/model_card.py`** (Session 22 completeness correction) —
+      `ModelCard` (§G.3): `metrics_summary` is a list of typed `MetricClaim`s
+      drawn from the exact six measured metrics (no `"fairness"` or other
+      unmeasured metric is even constructible), each cross-checked against
+      a real `experiments.json` via the same `verify_metric_in_experiments`
+      helper `ml/evaluate.py` itself uses; `contract_dependencies` must be
+      non-empty and include at least one string that exactly matches a real
+      `contract.assumptions` entry.
+- [x] 147 new test functions across 8 files, plus every Phase 0–4 test
       still green.
 
 ### Not started
