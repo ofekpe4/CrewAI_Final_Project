@@ -111,16 +111,110 @@ contract_architect_task:
     `scale_drift`: either the whole object is real and complete, or the
     field itself is `null`.
 
-    Also declare: the target column and its task type; `required_features`
-    (the columns a model MUST use); `excluded_features` — each with an
-    `exclusion_type` (identifier / target_leakage / redundancy_collinearity
-    / modeling_simplicity / ethical_sensitive) and `enforcement` (hard /
-    advisory). Only call something `target_leakage` if you have an actual
-    temporal or semantic reason it could not legitimately be known at
-    prediction time — a column merely correlating with, or being derivable
-    from, other available features is redundancy_collinearity (advisory),
-    never leakage. State your `assumptions` explicitly (e.g. what an empty
-    value in a given column is assumed to mean).
+    CRITICAL — grounding rule, applies to EVERY column name you write
+    anywhere in this draft (`columns`, `required_features`,
+    `excluded_features`, `primary_key`). Follow this exact three-step
+    process before writing a single column name:
+
+      STEP 1 — read the accepted CleaningPlan (given to you as prior
+      context from the Data Quality Inspector's task). Find every
+      `drop_column` operation in it and note which column(s) it removed.
+      Any dropped column is now OUTSIDE the clean-data interface entirely
+      — it does not exist for you, no matter how central it seemed in the
+      raw data or in the prior analyst's narrative.
+
+      STEP 2 — call `profile_clean_dataset` and treat its returned column
+      names as the ONE AND ONLY authoritative vocabulary for every column
+      reference you write. Not the raw Telco source names, not a
+      "canonical" snake_case convention, not a name from `data/README.md`,
+      not a name a previous run happened to use — THIS run's actual
+      profile, right now, is the only source of truth for spelling.
+
+      STEP 3 — before finalizing the draft, mechanically re-check: does
+      every single name I used in `columns`, `required_features`,
+      `excluded_features`, and `primary_key` appear character-for-character
+      in the STEP 2 profile? Specifically, you must NEVER:
+        - reconstruct a snake_case spelling from a raw/PascalCase name
+          (e.g. writing `monthly_charges` when the profile actually shows
+          `MonthlyCharges`);
+        - reconstruct a PascalCase/raw spelling from a canonical name
+          (the same mistake in the other direction);
+        - reuse a name from `read_source_documentation` for a column that
+          `profile_clean_dataset` no longer contains (cleaning removed it
+          — the source documentation describes the RAW dataset, not this
+          run's cleaned one);
+        - refer to a dropped identifier (from STEP 1) under ANY spelling;
+        - invent `customer_id` (or any other specific spelling) merely
+          because it looks like the "expected" or "usual" name for a
+          customer identifier — only write it if STEP 2's actual output
+          contains it.
+
+      This applies with special force to the customer identifier column —
+      see the two cases below — but is NOT limited to it: it governs every
+      single column name in this entire draft.
+
+    CRITICAL — feature curation, not column dumping: every non-target
+    column ACTUALLY PRESENT in the cleaned dataset needs a semantic entry
+    in `columns` (coverage is still mandatory for what exists — never for
+    a column you assume should exist), but that is NOT the same question
+    as whether it belongs in `required_features`. Decide, for every column
+    that is actually present, which of these four buckets it belongs in —
+    do not default to "just list every column as required":
+      1. **the target** — declared once, in `target`, never in `columns`.
+      2. **an identifier, CONDITIONAL on whether it is actually present**:
+         - **Case A — a customer-identifier-style column (a column whose
+           job is to name/key a row, not to describe or predict anything)
+           IS present in `profile_clean_dataset`**: use its EXACT real
+           name (whatever casing/spelling this run's Inspector agent
+           actually produced — do not alter it). This column MUST go in
+           `excluded_features` with `exclusion_type: "identifier"` and
+           `enforcement: "hard"`, with a real justification — and it MUST
+           NOT also appear in `required_features`.
+         - **Case B — no such column is present** (the Inspector agent
+           may have dropped it during cleaning — check
+           `profile_clean_dataset` to be sure): do NOT invent or recreate
+           it anywhere. It must not appear in `columns`,
+           `required_features`, `excluded_features`, or `primary_key`. An
+           identifier that was already removed from the modeling data
+           needs no further mention — declaring one that does not exist
+           is exactly the kind of invented fact this whole draft must
+           never contain.
+      3. **a required modeling feature** — a column you are confident a
+         model genuinely needs, based on the measured profile and the
+         prior analyst's insights (e.g. a column the InsightsDoc showed
+         has real, sizeable predictive signal). `required_features` is a
+         CURATED subset you can defend one-by-one, never shorthand for
+         "every column that is not the target and not obviously an
+         identifier."
+      4. **everything else** — an ordinary contract column: gets a full
+         semantic entry in `columns`, but does not need to appear in
+         `required_features` OR `excluded_features` just because it
+         exists. Leaving a column out of both lists is a normal, legitimate
+         outcome, not an omission.
+
+    `primary_key` MUST reference at least one column that is actually
+    declared in `columns` (the schema requires a non-empty list). Case A
+    above (identifier present): use it as the primary key — it can
+    simultaneously be `excluded_features`-hard AND the `primary_key`; that
+    is the normal, expected shape, not a contradiction. Case B (no
+    identifier remains): do NOT invent one — instead pick whichever
+    ACTUAL present column(s) come closest to identifying a row, and be
+    honest in `unique.justification` if they do not truly guarantee
+    uniqueness (e.g. `unique.value: false` with a justification explaining
+    that no genuinely unique row identifier remains after cleaning). An
+    honest "not truly unique" beats a fabricated identifier every time.
+
+    `excluded_features` — each entry needs an `exclusion_type` (identifier
+    / target_leakage / redundancy_collinearity / modeling_simplicity /
+    ethical_sensitive) and `enforcement` (hard / advisory). Only call
+    something `target_leakage` if you have an actual temporal or semantic
+    reason it could not legitimately be known at prediction time — a
+    column merely correlating with, or being derivable from, other
+    available features (e.g. a cumulative-total-style column that is
+    approximately tenure × a recurring charge) is `redundancy_collinearity`
+    (advisory) if you choose to flag it at all, never leakage. State your
+    `assumptions` explicitly (e.g. what an empty value in a given column is
+    assumed to mean).
 
     You never write dataset_contract.json yourself, and you never invent a
     min/max/median/row_count/hash — those are measured by Python from the

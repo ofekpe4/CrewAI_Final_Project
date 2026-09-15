@@ -1,8 +1,8 @@
 {
   "contract_version": "1.0.0",
-  "created_at": "2026-09-15T07:27:11Z",
+  "created_at": "2026-09-15T09:37:10Z",
   "created_by": "crew1.contract_architect",
-  "run_id": "20260915T072625Z-f10fb32e",
+  "run_id": "20260915T093624Z-c95361f2",
   "dataset_name": "telco_customer_churn",
   "source_documentation_url": "https://github.com/IBM/telco-customer-churn-on-icp4d",
   "target": {
@@ -11,19 +11,19 @@
     "constraints": {
       "dtype": {
         "expected": "int64",
-        "justification": "The churn column is a binary indicator of whether a customer has left the company, confirmed by the source documentation."
+        "justification": "The churn column is encoded as '1' for churned and '0' for not churned, confirmed by the source documentation."
       },
       "closed_domain": {
         "values": [
           "0",
           "1"
         ],
-        "justification": "The churn column represents a binary outcome: '0' for customers who did not churn and '1' for those who did.",
+        "justification": "The churn column has a fixed set of values representing binary outcomes: '0' for not churned and '1' for churned.",
         "severity": "ERROR"
       },
       "nullable": {
         "value": false,
-        "justification": "Every customer must have a churn status recorded."
+        "justification": "Every row must have a churn value, as it indicates whether the customer has churned or not."
       }
     },
     "observed": {
@@ -36,7 +36,6 @@
     "drift": null
   },
   "required_features": [
-    "customerID",
     "gender",
     "SeniorCitizen",
     "Partner",
@@ -57,7 +56,14 @@
     "MonthlyCharges",
     "TotalCharges"
   ],
-  "excluded_features": [],
+  "excluded_features": [
+    {
+      "name": "customerID",
+      "exclusion_type": "identifier",
+      "enforcement": "hard",
+      "justification": "The customerID serves as a unique identifier for each customer and should not be used in modeling."
+    }
+  ],
   "primary_key": {
     "columns": [
       "customerID"
@@ -65,7 +71,7 @@
     "constraints": {
       "unique": {
         "value": true,
-        "justification": "Each customerID uniquely identifies a customer in the dataset."
+        "justification": "The customerID is unique for each customer, ensuring that each row can be distinctly identified."
       }
     }
   },
@@ -90,7 +96,7 @@
       "constraints": {
         "dtype": {
           "expected": "str",
-          "justification": "The customerID is a unique identifier for each customer."
+          "justification": "The customerID is a string that uniquely identifies each customer."
         },
         "nullable": {
           "value": false,
@@ -129,7 +135,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a gender recorded."
+          "justification": "Every customer must have a gender value."
         },
         "unit": null,
         "business_range": null,
@@ -138,7 +144,7 @@
             "Male",
             "Female"
           ],
-          "justification": "The gender column has a fixed set of values representing gender.",
+          "justification": "The gender column has a fixed set of values representing male and female.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -164,11 +170,11 @@
       "constraints": {
         "dtype": {
           "expected": "int64",
-          "justification": "The SeniorCitizen column is a binary indicator of whether a customer is a senior citizen."
+          "justification": "The SeniorCitizen column is encoded as '0' for non-seniors and '1' for seniors."
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a senior citizen status recorded."
+          "justification": "Every customer must have a senior citizen status."
         },
         "unit": null,
         "business_range": null,
@@ -177,7 +183,7 @@
             "0",
             "1"
           ],
-          "justification": "The SeniorCitizen column has a fixed set of values indicating senior status.",
+          "justification": "The SeniorCitizen column has a fixed set of values representing binary outcomes.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -185,7 +191,7 @@
     },
     {
       "name": "Partner",
-      "semantic_type": "categorical",
+      "semantic_type": "binary",
       "observed": {
         "dtype": "str",
         "null_count": 0,
@@ -210,7 +216,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a partner status recorded."
+          "justification": "Every customer must have a partner status."
         },
         "unit": null,
         "business_range": null,
@@ -219,7 +225,7 @@
             "Yes",
             "No"
           ],
-          "justification": "The Partner column has a fixed set of values indicating partner status.",
+          "justification": "The Partner column has a fixed set of values representing whether the customer has a partner.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -227,7 +233,7 @@
     },
     {
       "name": "Dependents",
-      "semantic_type": "categorical",
+      "semantic_type": "binary",
       "observed": {
         "dtype": "str",
         "null_count": 0,
@@ -252,7 +258,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a dependents status recorded."
+          "justification": "Every customer must have a dependents status."
         },
         "unit": null,
         "business_range": null,
@@ -261,7 +267,7 @@
             "Yes",
             "No"
           ],
-          "justification": "The Dependents column has a fixed set of values indicating dependents status.",
+          "justification": "The Dependents column has a fixed set of values representing whether the customer has dependents.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -291,17 +297,17 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a tenure recorded."
+          "justification": "Every customer must have a tenure value."
         },
         "unit": {
           "value": "months",
-          "evidence": "The source documentation explicitly states that tenure is measured in months.",
+          "evidence": "The source documentation states that tenure is measured in months.",
           "confidence": "high"
         },
         "business_range": {
           "min": 0.0,
           "max": 72.0,
-          "justification": "Tenure cannot be negative and is capped at 72 months, which is plausible for a telecom service."
+          "justification": "Tenure cannot be negative and is capped at 72 months, which is consistent with the dataset's context."
         },
         "closed_domain": null,
         "scale_drift": null
@@ -309,7 +315,7 @@
     },
     {
       "name": "PhoneService",
-      "semantic_type": "categorical",
+      "semantic_type": "binary",
       "observed": {
         "dtype": "str",
         "null_count": 0,
@@ -334,7 +340,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a phone service status recorded."
+          "justification": "Every customer must have a phone service status."
         },
         "unit": null,
         "business_range": null,
@@ -343,7 +349,7 @@
             "Yes",
             "No"
           ],
-          "justification": "The PhoneService column has a fixed set of values indicating phone service status.",
+          "justification": "The PhoneService column has a fixed set of values representing whether the customer has phone service.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -377,7 +383,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a multiple lines status recorded."
+          "justification": "Every customer must have a multiple lines status."
         },
         "unit": null,
         "business_range": null,
@@ -387,7 +393,7 @@
             "No",
             "No phone service"
           ],
-          "justification": "The MultipleLines column has a fixed set of values indicating multiple lines status.",
+          "justification": "The MultipleLines column has a fixed set of values representing whether the customer has multiple lines.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -421,7 +427,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have an internet service status recorded."
+          "justification": "Every customer must have an internet service status."
         },
         "unit": null,
         "business_range": null,
@@ -431,7 +437,7 @@
             "Fiber optic",
             "No"
           ],
-          "justification": "The InternetService column has a fixed set of values indicating internet service type.",
+          "justification": "The InternetService column has a fixed set of values representing the type of internet service.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -465,7 +471,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have an online security status recorded."
+          "justification": "Every customer must have an online security status."
         },
         "unit": null,
         "business_range": null,
@@ -475,7 +481,7 @@
             "No",
             "No internet service"
           ],
-          "justification": "The OnlineSecurity column has a fixed set of values indicating online security status.",
+          "justification": "The OnlineSecurity column has a fixed set of values representing whether the customer has online security.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -509,7 +515,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have an online backup status recorded."
+          "justification": "Every customer must have an online backup status."
         },
         "unit": null,
         "business_range": null,
@@ -519,7 +525,7 @@
             "No",
             "No internet service"
           ],
-          "justification": "The OnlineBackup column has a fixed set of values indicating online backup status.",
+          "justification": "The OnlineBackup column has a fixed set of values representing whether the customer has online backup.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -553,7 +559,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a device protection status recorded."
+          "justification": "Every customer must have a device protection status."
         },
         "unit": null,
         "business_range": null,
@@ -563,7 +569,7 @@
             "No",
             "No internet service"
           ],
-          "justification": "The DeviceProtection column has a fixed set of values indicating device protection status.",
+          "justification": "The DeviceProtection column has a fixed set of values representing whether the customer has device protection.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -597,7 +603,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a tech support status recorded."
+          "justification": "Every customer must have a tech support status."
         },
         "unit": null,
         "business_range": null,
@@ -607,7 +613,7 @@
             "No",
             "No internet service"
           ],
-          "justification": "The TechSupport column has a fixed set of values indicating tech support status.",
+          "justification": "The TechSupport column has a fixed set of values representing whether the customer has tech support.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -641,7 +647,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a streaming TV status recorded."
+          "justification": "Every customer must have a streaming TV status."
         },
         "unit": null,
         "business_range": null,
@@ -651,7 +657,7 @@
             "No",
             "No internet service"
           ],
-          "justification": "The StreamingTV column has a fixed set of values indicating streaming TV status.",
+          "justification": "The StreamingTV column has a fixed set of values representing whether the customer has streaming TV.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -685,7 +691,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a streaming movies status recorded."
+          "justification": "Every customer must have a streaming movies status."
         },
         "unit": null,
         "business_range": null,
@@ -695,7 +701,7 @@
             "No",
             "No internet service"
           ],
-          "justification": "The StreamingMovies column has a fixed set of values indicating streaming movies status.",
+          "justification": "The StreamingMovies column has a fixed set of values representing whether the customer has streaming movies.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -729,7 +735,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a contract type recorded."
+          "justification": "Every customer must have a contract type."
         },
         "unit": null,
         "business_range": null,
@@ -739,7 +745,7 @@
             "One year",
             "Two year"
           ],
-          "justification": "The Contract column has a fixed set of values indicating contract type.",
+          "justification": "The Contract column has a fixed set of values representing the type of contract.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -747,7 +753,7 @@
     },
     {
       "name": "PaperlessBilling",
-      "semantic_type": "categorical",
+      "semantic_type": "binary",
       "observed": {
         "dtype": "str",
         "null_count": 0,
@@ -772,7 +778,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a paperless billing status recorded."
+          "justification": "Every customer must have a paperless billing status."
         },
         "unit": null,
         "business_range": null,
@@ -781,7 +787,7 @@
             "Yes",
             "No"
           ],
-          "justification": "The PaperlessBilling column has a fixed set of values indicating paperless billing status.",
+          "justification": "The PaperlessBilling column has a fixed set of values representing whether the customer has paperless billing.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -816,7 +822,7 @@
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a payment method recorded."
+          "justification": "Every customer must have a payment method."
         },
         "unit": null,
         "business_range": null,
@@ -827,7 +833,7 @@
             "Bank transfer (automatic)",
             "Credit card (automatic)"
           ],
-          "justification": "The PaymentMethod column has a fixed set of values indicating payment methods.",
+          "justification": "The PaymentMethod column has a fixed set of values representing the method of payment.",
           "severity": "ERROR"
         },
         "scale_drift": null
@@ -853,11 +859,11 @@
       "constraints": {
         "dtype": {
           "expected": "float64",
-          "justification": "The MonthlyCharges column represents the customer's current total monthly charge for all their services."
+          "justification": "The MonthlyCharges column represents the customer's current total monthly charge."
         },
         "nullable": {
           "value": false,
-          "justification": "Every customer must have a monthly charge recorded."
+          "justification": "Every customer must have a monthly charge value."
         },
         "unit": {
           "value": "currency_unspecified",
@@ -867,12 +873,12 @@
         "business_range": {
           "min": 18.25,
           "max": 118.75,
-          "justification": "Monthly charges cannot be negative and are capped at 118.75 based on observed data."
+          "justification": "Monthly charges cannot be negative and are capped at 118.75 based on the observed data."
         },
         "closed_domain": null,
         "scale_drift": {
           "median_rel_tolerance": 0.1,
-          "justification": "A significant change in monthly charges would indicate a potential scale change.",
+          "justification": "A significant shift in monthly charges would indicate a potential issue with pricing or customer retention.",
           "severity": "WARN"
         }
       }
@@ -901,7 +907,7 @@
         },
         "nullable": {
           "value": true,
-          "justification": "TotalCharges can be null for new customers who have not yet been billed."
+          "justification": "TotalCharges can be null for customers who have not yet been billed."
         },
         "unit": {
           "value": "currency_unspecified",
@@ -909,14 +915,14 @@
           "confidence": "high"
         },
         "business_range": {
-          "min": 0.0,
+          "min": 18.8,
           "max": 8684.8,
-          "justification": "Total charges cannot be negative and are capped at 8684.8 based on observed data."
+          "justification": "Total charges cannot be negative and are capped at 8684.8 based on the observed data."
         },
         "closed_domain": null,
         "scale_drift": {
           "median_rel_tolerance": 0.1,
-          "justification": "A significant change in total charges would indicate a potential scale change.",
+          "justification": "A significant shift in total charges would indicate a potential issue with billing or customer retention.",
           "severity": "WARN"
         }
       }
@@ -952,7 +958,7 @@
   },
   "assumptions": [
     "The dataset's 'customers' and 'churn this quarter' framing is treated as a single-snapshot cross-section (one row per customer, one observation point).",
-    "The encoding of binary flags is consistent across columns, with '0' and '1' representing 'No' and 'Yes' respectively."
+    "The encoding of binary flags is consistent across columns, with '0' and '1' representing boolean values."
   ],
   "validation_policy": {
     "on_unknown_column": "warn",

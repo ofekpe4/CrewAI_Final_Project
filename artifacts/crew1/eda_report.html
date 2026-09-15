@@ -262,48 +262,59 @@ table.stats-table th { background: #edf2f7; }
 </table>
 
 
+<h2>Figures</h2>
+<div class="figures">
+
+<img src="figures/target_rate_by__Contract.png" alt="figures/target_rate_by__Contract.png">
+
+<img src="figures/target_rate_by__PaymentMethod.png" alt="figures/target_rate_by__PaymentMethod.png">
+
+<img src="figures/distribution__MonthlyCharges.png" alt="figures/distribution__MonthlyCharges.png">
+
+</div>
+
 
 
 <h2>Insights</h2>
 
 <div class="insight-card">
   <h3>Contract Length is Key to Retention</h3>
-  <p>Customers with month-to-month contracts have a churn rate of 42.7%, compared to only 2.8% for those with two-year contracts.</p>
-  <p><strong>Business implication:</strong> This stark difference indicates that contract length is a significant factor in customer retention, suggesting that month-to-month customers are at a higher risk of leaving.</p>
+  <p>Customers with month-to-month contracts have a churn rate of 42.7%, compared to just 2.8% for those with two-year contracts.</p>
+  <p><strong>Business implication:</strong> This stark difference indicates that contract length is a significant factor in customer retention. Retaining customers on longer contracts can reduce churn and stabilize revenue.</p>
   <p><strong>Recommended action:</strong> Implement targeted incentives to encourage month-to-month customers to switch to longer-term contracts, such as discounts or loyalty rewards.</p>
   <p class="evidence-key">evidence: Contract.target_rate_by_category.Month-to-month</p>
 </div>
 
 <div class="insight-card">
   <h3>Impact of Monthly Charges on Churn</h3>
-  <p>There is a positive correlation (0.193) between Monthly Charges and churn, indicating that higher monthly fees may contribute to customer dissatisfaction.</p>
-  <p><strong>Business implication:</strong> If customers perceive their monthly charges as too high, they may be more likely to churn, especially if they feel they are not receiving adequate value.</p>
-  <p><strong>Recommended action:</strong> Review pricing strategies and consider offering tiered pricing or value-added services to enhance perceived value for customers with higher monthly charges.</p>
+  <p>There is a positive correlation of 0.193 between MonthlyCharges and churn, suggesting that higher monthly charges may contribute to increased churn rates.</p>
+  <p><strong>Business implication:</strong> If customers perceive their monthly charges as too high, they may be more likely to leave, especially if they find cheaper alternatives.</p>
+  <p><strong>Recommended action:</strong> Review pricing strategies and consider offering tiered pricing or discounts for long-term customers to enhance perceived value.</p>
   <p class="evidence-key">evidence: MonthlyCharges.mean</p>
 </div>
 
 <div class="insight-card">
-  <h3>Dependents Reduce Churn Risk</h3>
-  <p>Customers with dependents have a churn rate of 15.5%, significantly lower than the 31.3% rate for those without dependents.</p>
-  <p><strong>Business implication:</strong> This indicates that families or customers with dependents may have different needs or loyalty factors that keep them engaged with the service.</p>
-  <p><strong>Recommended action:</strong> Create family-oriented plans or packages that cater specifically to customers with dependents to enhance retention.</p>
-  <p class="evidence-key">evidence: Dependents.target_rate_by_category.Yes</p>
+  <h3>Gender and Churn Rates Are Similar</h3>
+  <p>The churn rates for male (26.2%) and female (26.9%) customers are nearly identical, indicating that gender does not significantly influence churn.</p>
+  <p><strong>Business implication:</strong> Marketing and retention strategies do not need to be gender-specific, allowing for a more streamlined approach to customer engagement.</p>
+  <p><strong>Recommended action:</strong> Focus retention efforts on other demographic factors or service usage patterns rather than gender.</p>
+  <p class="evidence-key">evidence: gender.target_rate_by_category.Female</p>
+</div>
+
+<div class="insight-card">
+  <h3>Dependents Show Lower Churn Rates</h3>
+  <p>Customers with dependents have a churn rate of 15.5%, compared to 31.3% for those without dependents.</p>
+  <p><strong>Business implication:</strong> This suggests that customers with dependents may be more committed to their services, possibly due to family needs.</p>
+  <p><strong>Recommended action:</strong> Develop targeted retention strategies for customers without dependents, who show higher churn rates.</p>
+  <p class="evidence-key">evidence: Dependents.target_rate_by_category.No</p>
 </div>
 
 <div class="insight-card">
   <h3>Payment Method Influences Churn</h3>
-  <p>Customers using electronic checks have a churn rate of 45.3%, the highest among payment methods.</p>
-  <p><strong>Business implication:</strong> This suggests that the payment method may correlate with customer satisfaction or ease of use, impacting their likelihood to stay.</p>
-  <p><strong>Recommended action:</strong> Investigate the payment process for electronic check users and consider offering incentives for switching to more stable payment methods.</p>
+  <p>Customers using Electronic Checks have a churn rate of 45.3%, significantly higher than those using other payment methods.</p>
+  <p><strong>Business implication:</strong> This suggests that the payment method may correlate with customer satisfaction or financial stability.</p>
+  <p><strong>Recommended action:</strong> Investigate the reasons behind the high churn rate among Electronic Check users and consider offering alternative payment options or incentives.</p>
   <p class="evidence-key">evidence: PaymentMethod.target_rate_by_category.Electronic check</p>
-</div>
-
-<div class="insight-card">
-  <h3>Gender Differences in Churn Rates</h3>
-  <p>Female customers have a churn rate of 26.9%, while male customers have a churn rate of 26.2%.</p>
-  <p><strong>Business implication:</strong> This slight difference suggests that gender may play a role in customer retention strategies, indicating a need for tailored approaches.</p>
-  <p><strong>Recommended action:</strong> Analyze customer feedback by gender to identify specific concerns or preferences that could inform targeted retention strategies.</p>
-  <p class="evidence-key">evidence: gender.target_rate_by_category.Female</p>
 </div>
 
 
@@ -311,7 +322,7 @@ table.stats-table th { background: #edf2f7; }
 <h2>Data caveats</h2>
 <ul class="caveats">
 
-<li>The dataset does not specify the currency for monetary columns.</li>
+<li>The dataset does not specify the currency for monetary values, making it unclear how to interpret financial metrics.</li>
 
 <li>These insights are based on observed associations and do not imply causation.</li>
 
