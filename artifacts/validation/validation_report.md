@@ -1,6 +1,6 @@
 ================================================================
   DATA CONTRACT VALIDATION PASSED
-  run_id: 20260915T072625Z-f10fb32e · contract v1.0.0
+  run_id: quality-closeout-eda-fix · contract v1.0.0
   0 error(s) · 0 warning(s) · 101 check(s) run
 ================================================================
 

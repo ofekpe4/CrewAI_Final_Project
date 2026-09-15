@@ -446,6 +446,77 @@ def test_narrative_fallback_is_visible(tmp_path: Path) -> None:
     shutil.rmtree(workspace, ignore_errors=True)
 
 
+def test_contract_architect_prompt_covers_feature_curation(tmp_path: Path) -> None:  # noqa: ARG001
+    """Phase 6 quality close-out (Session 24): protects the PROMPT CONTRACT
+    text itself, not LLM reasoning quality — a canned "the agent got it
+    right" fixture would prove nothing about a real run. This only asserts
+    that `config/tasks.yaml`'s Contract Architect task actually contains
+    the guidance a live run relies on: that an identifier must be
+    hard-excluded and never required, that `required_features` is a
+    curated subset (not every non-target column), and that redundancy is
+    not automatically leakage — grounded in the real Run 1/Run 2 evidence
+    (`working flow/2026-09-15_session-23.md`, session 24's own record)."""
+    from harbor_vale.crews.analyst_crew.analyst_crew import _TASKS_YAML, _load_yaml
+
+    raw = _load_yaml(_TASKS_YAML)["contract_architect_task"]["description"]
+    # YAML's `>` folding does not fold newlines inside a more-indented block
+    # (this task's numbered list) — normalize whitespace so this test
+    # checks CONTENT, not incidental line-wrapping.
+    description = " ".join(raw.split())
+
+    check(
+        "prompt: identifier must be hard-excluded, per this run's ACTUAL column name",
+        "identifier" in description.lower() and "hard" in description,
+    )
+    check(
+        "prompt: identifier must NOT also appear in required_features",
+        "MUST NOT" in description and "required_features" in description,
+    )
+    check(
+        "prompt: required_features framed as a curated subset, not every non-target column",
+        "curated subset" in description.lower(),
+    )
+    check(
+        "prompt: redundancy/correlation explicitly distinguished from leakage",
+        "redundancy_collinearity" in description and "never leakage" in description,
+    )
+    check(
+        "prompt: does NOT hardcode an assumed snake_case column spelling for the identifier",
+        "customer_id" not in description,
+    )
+
+
+def test_eda_figure_resolution_is_naming_agnostic(tmp_path: Path) -> None:  # noqa: ARG001
+    """Phase 6 quality close-out (Session 24): the deterministic EDA-figure
+    column resolution (`callbacks.py`) must find the right columns whether
+    the Inspector agent renamed them to canonical snake_case, left them in
+    raw PascalCase (the real Run 2 behavior), or used some other casing —
+    never silently produce zero figures the way the original Run 2 render
+    did (root-caused and fixed this session)."""
+    from harbor_vale.crews.analyst_crew.callbacks import (
+        _DISTRIBUTION_FIGURE_CANDIDATES,
+        _TARGET_RATE_FIGURE_CANDIDATES,
+        _resolve_column,
+    )
+
+    for columns, expected in (
+        (["Contract", "PaymentMethod", "MonthlyCharges", "churn"], {"Contract", "PaymentMethod", "MonthlyCharges"}),
+        (
+            ["contract_type", "payment_method", "monthly_charges", "churn"],
+            {"contract_type", "payment_method", "monthly_charges"},
+        ),
+    ):
+        resolved = {
+            c for c in (_resolve_column(columns, *slot) for slot in _TARGET_RATE_FIGURE_CANDIDATES) if c
+        }
+        resolved |= {_resolve_column(columns, *_DISTRIBUTION_FIGURE_CANDIDATES)}
+        check(
+            f"figure resolution finds all 3 real columns regardless of naming style ({columns[:2]})",
+            resolved == expected,
+            f"resolved={resolved}",
+        )
+
+
 ALL_TESTS = [
     test_pattern_a_structure,
     test_crew1_produces_artifacts,
@@ -453,6 +524,8 @@ ALL_TESTS = [
     test_critical_agent_failure_halts,
     test_critical_agent_failure_contract_architect_halts,
     test_narrative_fallback_is_visible,
+    test_contract_architect_prompt_covers_feature_curation,
+    test_eda_figure_resolution_is_naming_agnostic,
 ]
 
 
