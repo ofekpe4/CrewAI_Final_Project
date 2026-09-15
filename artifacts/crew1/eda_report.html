@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>telco_customer_churn — EDA Report</title>
+<style>/* Harbor & Vale — eda_report.html styling (PROJECT_PLAN.md §D.2 point 8).
+   Deterministic, static CSS — no external font/CDN fetch, so the report
+   renders identically offline and in CI. */
+
+body {
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 2rem;
+  background: #f7f8fa;
+  color: #1a202c;
+}
+
+h1, h2, h3 { color: #1a202c; }
+
+.headline {
+  font-size: 1.25rem;
+  color: #2b6cb0;
+  margin-bottom: 1.5rem;
+}
+
+.degraded-banner {
+  background: #fff5f5;
+  border: 2px solid #e53e3e;
+  color: #742a2a;
+  padding: 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.insight-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.insight-card h3 { margin-top: 0; }
+
+.evidence-key {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.85rem;
+  color: #718096;
+}
+
+table.stats-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  background: #ffffff;
+}
+
+table.stats-table th, table.stats-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.4rem 0.75rem;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+table.stats-table th { background: #edf2f7; }
+
+.figures img {
+  max-width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+.caveats { color: #718096; font-size: 0.9rem; }</style>
+</head>
+<body>
+<h1>telco_customer_churn — Exploratory Data Analysis</h1>
+
+
+<p class="headline">Insights on Customer Churn at Harbor &amp; Vale</p>
+
+
+<h2>Measured statistics</h2>
+<table class="stats-table">
+<thead><tr><th>Key</th><th>Value</th></tr></thead>
+<tbody>
+
+<tr><td>dataset.row_count</td><td>7043</td></tr>
+
+<tr><td>dataset.column_count</td><td>21</td></tr>
+
+<tr><td>churn.positive_rate</td><td>0.2653698707936959</td></tr>
+
+<tr><td>churn.positive_count</td><td>1869</td></tr>
+
+<tr><td>churn.negative_count</td><td>5174</td></tr>
+
+<tr><td>customerID.unique_count</td><td>7043</td></tr>
+
+<tr><td>gender.unique_count</td><td>2</td></tr>
+
+<tr><td>gender.target_rate_by_category.Female</td><td>0.26920871559633025</td></tr>
+
+<tr><td>gender.target_rate_by_category.Male</td><td>0.2616033755274262</td></tr>
+
+<tr><td>SeniorCitizen.count</td><td>7043</td></tr>
+
+<tr><td>SeniorCitizen.mean</td><td>0.1621468124378816</td></tr>
+
+<tr><td>SeniorCitizen.median</td><td>0.0</td></tr>
+
+<tr><td>SeniorCitizen.std</td><td>0.3686116056100131</td></tr>
+
+<tr><td>SeniorCitizen.min</td><td>0.0</td></tr>
+
+<tr><td>SeniorCitizen.max</td><td>1.0</td></tr>
+
+<tr><td>Partner.unique_count</td><td>2</td></tr>
+
+<tr><td>Partner.target_rate_by_category.No</td><td>0.32957978577313923</td></tr>
+
+<tr><td>Partner.target_rate_by_category.Yes</td><td>0.1966490299823633</td></tr>
+
+<tr><td>Dependents.unique_count</td><td>2</td></tr>
+
+<tr><td>Dependents.target_rate_by_category.No</td><td>0.3127914048246503</td></tr>
+
+<tr><td>Dependents.target_rate_by_category.Yes</td><td>0.15450236966824646</td></tr>
+
+<tr><td>tenure.count</td><td>7043</td></tr>
+
+<tr><td>tenure.mean</td><td>32.37114865824223</td></tr>
+
+<tr><td>tenure.median</td><td>29.0</td></tr>
+
+<tr><td>tenure.std</td><td>24.55948102309446</td></tr>
+
+<tr><td>tenure.min</td><td>0.0</td></tr>
+
+<tr><td>tenure.max</td><td>72.0</td></tr>
+
+<tr><td>PhoneService.unique_count</td><td>2</td></tr>
+
+<tr><td>PhoneService.target_rate_by_category.No</td><td>0.24926686217008798</td></tr>
+
+<tr><td>PhoneService.target_rate_by_category.Yes</td><td>0.2670963684955196</td></tr>
+
+<tr><td>MultipleLines.unique_count</td><td>3</td></tr>
+
+<tr><td>MultipleLines.target_rate_by_category.No</td><td>0.2504424778761062</td></tr>
+
+<tr><td>MultipleLines.target_rate_by_category.No phone service</td><td>0.24926686217008798</td></tr>
+
+<tr><td>MultipleLines.target_rate_by_category.Yes</td><td>0.286098956580276</td></tr>
+
+<tr><td>InternetService.unique_count</td><td>3</td></tr>
+
+<tr><td>InternetService.target_rate_by_category.DSL</td><td>0.1895910780669145</td></tr>
+
+<tr><td>InternetService.target_rate_by_category.Fiber optic</td><td>0.4189276485788114</td></tr>
+
+<tr><td>InternetService.target_rate_by_category.No</td><td>0.07404980340760157</td></tr>
+
+<tr><td>OnlineSecurity.unique_count</td><td>3</td></tr>
+
+<tr><td>OnlineSecurity.target_rate_by_category.No</td><td>0.4176672384219554</td></tr>
+
+<tr><td>OnlineSecurity.target_rate_by_category.No internet service</td><td>0.07404980340760157</td></tr>
+
+<tr><td>OnlineSecurity.target_rate_by_category.Yes</td><td>0.14611193660227836</td></tr>
+
+<tr><td>OnlineBackup.unique_count</td><td>3</td></tr>
+
+<tr><td>OnlineBackup.target_rate_by_category.No</td><td>0.39928756476683935</td></tr>
+
+<tr><td>OnlineBackup.target_rate_by_category.No internet service</td><td>0.07404980340760157</td></tr>
+
+<tr><td>OnlineBackup.target_rate_by_category.Yes</td><td>0.21531494442157267</td></tr>
+
+<tr><td>DeviceProtection.unique_count</td><td>3</td></tr>
+
+<tr><td>DeviceProtection.target_rate_by_category.No</td><td>0.3912762520193861</td></tr>
+
+<tr><td>DeviceProtection.target_rate_by_category.No internet service</td><td>0.07404980340760157</td></tr>
+
+<tr><td>DeviceProtection.target_rate_by_category.Yes</td><td>0.2250206440957886</td></tr>
+
+<tr><td>TechSupport.unique_count</td><td>3</td></tr>
+
+<tr><td>TechSupport.target_rate_by_category.No</td><td>0.4163547365390153</td></tr>
+
+<tr><td>TechSupport.target_rate_by_category.No internet service</td><td>0.07404980340760157</td></tr>
+
+<tr><td>TechSupport.target_rate_by_category.Yes</td><td>0.15166340508806261</td></tr>
+
+<tr><td>StreamingTV.unique_count</td><td>3</td></tr>
+
+<tr><td>StreamingTV.target_rate_by_category.No</td><td>0.33523131672597867</td></tr>
+
+<tr><td>StreamingTV.target_rate_by_category.No internet service</td><td>0.07404980340760157</td></tr>
+
+<tr><td>StreamingTV.target_rate_by_category.Yes</td><td>0.30070188400443293</td></tr>
+
+<tr><td>StreamingMovies.unique_count</td><td>3</td></tr>
+
+<tr><td>StreamingMovies.target_rate_by_category.No</td><td>0.33680430879712747</td></tr>
+
+<tr><td>StreamingMovies.target_rate_by_category.No internet service</td><td>0.07404980340760157</td></tr>
+
+<tr><td>StreamingMovies.target_rate_by_category.Yes</td><td>0.29941434846266474</td></tr>
+
+<tr><td>Contract.unique_count</td><td>3</td></tr>
+
+<tr><td>Contract.target_rate_by_category.Month-to-month</td><td>0.4270967741935484</td></tr>
+
+<tr><td>Contract.target_rate_by_category.One year</td><td>0.11269517990495587</td></tr>
+
+<tr><td>Contract.target_rate_by_category.Two year</td><td>0.02831858407079646</td></tr>
+
+<tr><td>PaperlessBilling.unique_count</td><td>2</td></tr>
+
+<tr><td>PaperlessBilling.target_rate_by_category.No</td><td>0.1633008356545961</td></tr>
+
+<tr><td>PaperlessBilling.target_rate_by_category.Yes</td><td>0.33565092304003835</td></tr>
+
+<tr><td>PaymentMethod.unique_count</td><td>4</td></tr>
+
+<tr><td>PaymentMethod.target_rate_by_category.Bank transfer (automatic)</td><td>0.16709844559585493</td></tr>
+
+<tr><td>PaymentMethod.target_rate_by_category.Credit card (automatic)</td><td>0.15243101182654403</td></tr>
+
+<tr><td>PaymentMethod.target_rate_by_category.Electronic check</td><td>0.4528541226215645</td></tr>
+
+<tr><td>PaymentMethod.target_rate_by_category.Mailed check</td><td>0.19106699751861042</td></tr>
+
+<tr><td>MonthlyCharges.count</td><td>7043</td></tr>
+
+<tr><td>MonthlyCharges.mean</td><td>64.76169246059918</td></tr>
+
+<tr><td>MonthlyCharges.median</td><td>70.35</td></tr>
+
+<tr><td>MonthlyCharges.std</td><td>30.090047097678493</td></tr>
+
+<tr><td>MonthlyCharges.min</td><td>18.25</td></tr>
+
+<tr><td>MonthlyCharges.max</td><td>118.75</td></tr>
+
+<tr><td>TotalCharges.count</td><td>7032</td></tr>
+
+<tr><td>TotalCharges.mean</td><td>2283.300440841866</td></tr>
+
+<tr><td>TotalCharges.median</td><td>1397.475</td></tr>
+
+<tr><td>TotalCharges.std</td><td>2266.771361883145</td></tr>
+
+<tr><td>TotalCharges.min</td><td>18.8</td></tr>
+
+<tr><td>TotalCharges.max</td><td>8684.8</td></tr>
+
+</tbody>
+</table>
+
+
+
+
+<h2>Insights</h2>
+
+<div class="insight-card">
+  <h3>Contract Length is Key to Retention</h3>
+  <p>Customers with month-to-month contracts have a churn rate of 42.7%, compared to only 2.8% for those with two-year contracts.</p>
+  <p><strong>Business implication:</strong> This stark difference indicates that contract length is a significant factor in customer retention, suggesting that month-to-month customers are at a higher risk of leaving.</p>
+  <p><strong>Recommended action:</strong> Implement targeted incentives to encourage month-to-month customers to switch to longer-term contracts, such as discounts or loyalty rewards.</p>
+  <p class="evidence-key">evidence: Contract.target_rate_by_category.Month-to-month</p>
+</div>
+
+<div class="insight-card">
+  <h3>Impact of Monthly Charges on Churn</h3>
+  <p>There is a positive correlation (0.193) between Monthly Charges and churn, indicating that higher monthly fees may contribute to customer dissatisfaction.</p>
+  <p><strong>Business implication:</strong> If customers perceive their monthly charges as too high, they may be more likely to churn, especially if they feel they are not receiving adequate value.</p>
+  <p><strong>Recommended action:</strong> Review pricing strategies and consider offering tiered pricing or value-added services to enhance perceived value for customers with higher monthly charges.</p>
+  <p class="evidence-key">evidence: MonthlyCharges.mean</p>
+</div>
+
+<div class="insight-card">
+  <h3>Dependents Reduce Churn Risk</h3>
+  <p>Customers with dependents have a churn rate of 15.5%, significantly lower than the 31.3% rate for those without dependents.</p>
+  <p><strong>Business implication:</strong> This indicates that families or customers with dependents may have different needs or loyalty factors that keep them engaged with the service.</p>
+  <p><strong>Recommended action:</strong> Create family-oriented plans or packages that cater specifically to customers with dependents to enhance retention.</p>
+  <p class="evidence-key">evidence: Dependents.target_rate_by_category.Yes</p>
+</div>
+
+<div class="insight-card">
+  <h3>Payment Method Influences Churn</h3>
+  <p>Customers using electronic checks have a churn rate of 45.3%, the highest among payment methods.</p>
+  <p><strong>Business implication:</strong> This suggests that the payment method may correlate with customer satisfaction or ease of use, impacting their likelihood to stay.</p>
+  <p><strong>Recommended action:</strong> Investigate the payment process for electronic check users and consider offering incentives for switching to more stable payment methods.</p>
+  <p class="evidence-key">evidence: PaymentMethod.target_rate_by_category.Electronic check</p>
+</div>
+
+<div class="insight-card">
+  <h3>Gender Differences in Churn Rates</h3>
+  <p>Female customers have a churn rate of 26.9%, while male customers have a churn rate of 26.2%.</p>
+  <p><strong>Business implication:</strong> This slight difference suggests that gender may play a role in customer retention strategies, indicating a need for tailored approaches.</p>
+  <p><strong>Recommended action:</strong> Analyze customer feedback by gender to identify specific concerns or preferences that could inform targeted retention strategies.</p>
+  <p class="evidence-key">evidence: gender.target_rate_by_category.Female</p>
+</div>
+
+
+
+<h2>Data caveats</h2>
+<ul class="caveats">
+
+<li>The dataset does not specify the currency for monetary columns.</li>
+
+<li>These insights are based on observed associations and do not imply causation.</li>
+
+</ul>
+
+
+
+</body>
+</html>
