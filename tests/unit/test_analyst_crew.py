@@ -480,9 +480,13 @@ def test_contract_architect_prompt_covers_feature_curation(tmp_path: Path) -> No
         "prompt: redundancy/correlation explicitly distinguished from leakage",
         "redundancy_collinearity" in description and "never leakage" in description,
     )
+    # `customer_id` may appear ONLY as STEP 3's explicit negative example
+    # ("do NOT invent `customer_id` merely because...") — never asserted
+    # elsewhere as if it were the expected/correct spelling.
     check(
-        "prompt: does NOT hardcode an assumed snake_case column spelling for the identifier",
-        "customer_id" not in description,
+        "prompt: `customer_id` appears at most once, and only as a forbidden-guess example",
+        description.count("customer_id") <= 1
+        and ("customer_id" not in description or "invent `customer_id`" in description),
     )
 
     # --- Session 25 (final Phase 6 verification): the grounding rule ----
@@ -491,16 +495,34 @@ def test_contract_architect_prompt_covers_feature_curation(tmp_path: Path) -> No
         "character-for-character" in description and "profile_clean_dataset" in description,
     )
     check(
-        "prompt: explicitly forbids reconstructing/guessing a canonical or remembered column name",
-        "Never reconstruct, guess, or assume a column name" in raw,
-    )
-    check(
         "prompt: explicit two-case identifier handling (present -> hard exclude; absent -> do not mention)",
         "Case A" in description and "Case B" in description,
     )
     check(
         "prompt: Case B explicitly forbids inventing/recreating a dropped identifier anywhere",
         "do NOT invent or recreate" in raw,
+    )
+
+    # --- Session 26 (Contract Architect grounding, second corrective iteration) ---
+    check(
+        "prompt: STEP 1 requires reading the accepted CleaningPlan to find drop_column'd columns",
+        "STEP 1" in description and "drop_column" in description and "CleaningPlan" in description,
+    )
+    check(
+        "prompt: STEP 2 names profile_clean_dataset as the SOLE authoritative vocabulary",
+        "STEP 2" in description and "ONE AND ONLY authoritative vocabulary" in description,
+    )
+    check(
+        "prompt: STEP 3 explicitly bans reconstructing snake_case from a raw/PascalCase name",
+        "reconstruct a snake_case spelling from a raw" in description,
+    )
+    check(
+        "prompt: STEP 3 explicitly bans reconstructing PascalCase/raw from a canonical name",
+        "reconstruct a PascalCase/raw spelling from a canonical name" in description,
+    )
+    check(
+        "prompt: STEP 3 explicitly bans reusing a source-documentation name cleaning removed",
+        "reuse a name from `read_source_documentation`" in description,
     )
     check(
         "prompt: primary_key given honest-not-unique guidance for Case B, not a forced fabrication",
