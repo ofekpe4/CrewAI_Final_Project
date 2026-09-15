@@ -1,0 +1,62 @@
+{
+  "purpose": "The purpose of this model is to predict customer churn for a telecommunications company, enabling proactive retention strategies.",
+  "intended_use": "This model is intended for use by customer retention teams to identify customers at risk of churning, allowing for targeted interventions.",
+  "out_of_scope_use": [
+    "Using the model for purposes outside of customer churn prediction, such as financial forecasting.",
+    "Applying the model to datasets not aligned with the training data characteristics."
+  ],
+  "training_data_summary": "The training data consists of 7043 customer records with 21 features, including demographic information and service usage metrics. The target variable is binary, indicating whether a customer has churned.",
+  "metrics_summary": [
+    {
+      "metric": "roc_auc",
+      "split": "test",
+      "variant_name": "Logistic Regression Base",
+      "value": 0.8477950864140121
+    },
+    {
+      "metric": "pr_auc",
+      "split": "test",
+      "variant_name": "Logistic Regression Base",
+      "value": 0.6657875091887766
+    },
+    {
+      "metric": "f1",
+      "split": "test",
+      "variant_name": "Logistic Regression Base",
+      "value": 0.6176165803108808
+    },
+    {
+      "metric": "precision",
+      "split": "test",
+      "variant_name": "Logistic Regression Base",
+      "value": 0.5042301184433164
+    },
+    {
+      "metric": "recall",
+      "split": "test",
+      "variant_name": "Logistic Regression Base",
+      "value": 0.7967914438502673
+    },
+    {
+      "metric": "accuracy",
+      "split": "test",
+      "variant_name": "Logistic Regression Base",
+      "value": 0.7381121362668559
+    }
+  ],
+  "limitations": [
+    "The model assumes the measurement scale for monetary columns remains constant; any upstream changes in currency or scale would invalidate predictions.",
+    "Fairness and bias metrics were not measured; therefore, the model's performance across different demographic groups is unknown."
+  ],
+  "ethical_considerations": [
+    "The model should be used responsibly to avoid discriminatory practices in customer retention efforts.",
+    "Transparency with customers regarding the use of their data for predictive modeling is essential."
+  ],
+  "contract_dependencies": [
+    "The dataset's 'customers' and 'churn this quarter' framing is treated as a single-snapshot cross-section (one row per customer, one observation point)."
+  ],
+  "monitoring_recommendations": [
+    "Regularly monitor model performance metrics to detect any drift in accuracy or other key performance indicators.",
+    "Implement a feedback loop to update the model with new data and retrain as necessary to maintain performance."
+  ]
+}

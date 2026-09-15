@@ -1,8 +1,8 @@
 {
-  "run_id": "20260915T122449Z-ff7101ea",
-  "status": "halted_agent_failure",
-  "failure_category": "agent_output",
-  "failure_summary": "guardrail exhausted after retries",
+  "run_id": "20260915T123249Z-61d6335c",
+  "status": "completed",
+  "failure_category": null,
+  "failure_summary": null,
   "execution_mode": "normal",
   "fault_injection": null,
   "dataset": {
@@ -11,19 +11,34 @@
     "columns": 21
   },
   "crew1": {
-    "completed": false,
+    "completed": true,
     "degraded_agents": [],
-    "artifacts": {}
+    "artifacts": {
+      "clean_data_csv": "artifacts/crew1/clean_data.csv",
+      "dataset_contract_json": "artifacts/crew1/dataset_contract.json",
+      "eda_report_html": "artifacts/crew1/eda_report.html",
+      "insights_md": "artifacts/crew1/insights.md"
+    }
   },
   "validation": {
-    "passed": false,
+    "passed": true,
     "errors": 0,
     "warnings": 0,
     "report_path": "artifacts/validation/validation_report.json"
   },
   "crew2": {
-    "started": false,
-    "reason": "Crew 1 reported a critical agent failure \u2014 the pipeline halted before Crew 2 could start"
+    "started": true,
+    "completed": true,
+    "degraded_agents": [],
+    "artifacts": {
+      "features_csv": "artifacts/crew2/features.csv",
+      "model_joblib": "artifacts/crew2/model.joblib",
+      "evaluation_report_md": "artifacts/crew2/evaluation_report.md",
+      "model_card_md": "artifacts/crew2/model_card.md"
+    },
+    "best_model_name": "Logistic Regression Base",
+    "primary_metric": "roc_auc",
+    "primary_metric_value": 0.8477950864140121
   },
-  "log_path": "logs/pipeline_20260915T122449Z-ff7101ea.log"
+  "log_path": "logs/pipeline_20260915T123249Z-61d6335c.log"
 }

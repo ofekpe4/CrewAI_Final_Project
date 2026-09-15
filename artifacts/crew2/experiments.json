@@ -1,34 +1,34 @@
 {
-  "run_id": "20260915T102608Z-b36bbce3",
-  "created_at": "2026-09-15T10:26:28Z",
+  "run_id": "20260915T123249Z-61d6335c",
+  "created_at": "2026-09-15T12:34:04Z",
   "primary_metric": "roc_auc",
-  "metric_rationale": "Given the observed positive rate of approximately 26.5%, ROC-AUC is appropriate as it evaluates the model's ability to distinguish between churners and non-churners across all thresholds, which is crucial in this imbalanced classification problem.",
+  "metric_rationale": "Given the observed positive rate of approximately 26.5%, ROC-AUC is appropriate as it evaluates the model's ability to distinguish between churners and non-churners across all thresholds, which is crucial in this imbalanced classification scenario.",
   "cv_folds": 5,
   "variants": [
     {
-      "name": "Logistic Regression Baseline",
+      "name": "Logistic Regression Base",
       "estimator": "logistic_regression",
       "params": {
         "C": 1.0,
-        "max_iter": 100,
-        "class_weight": "balanced"
+        "class_weight": "balanced",
+        "max_iter": 100
       },
-      "rationale": "Logistic regression provides a simple yet effective baseline model for binary classification, allowing us to assess the performance of more complex models against a straightforward approach.",
+      "rationale": "Logistic regression provides a straightforward probabilistic interpretation and is effective for binary classification tasks, making it a solid baseline model.",
       "cv_metrics": {
-        "roc_auc": 0.8501992225029714,
-        "pr_auc": 0.671189851403825,
-        "f1": 0.6333861595351294,
-        "precision": 0.5233522479266696,
-        "recall": 0.8020066889632107,
-        "accuracy": 0.7536386226482074,
+        "roc_auc": 0.849307953304928,
+        "pr_auc": 0.6696765481593332,
+        "f1": 0.6340819022457067,
+        "precision": 0.5240174672489083,
+        "recall": 0.802675585284281,
+        "accuracy": 0.7541711040113596,
         "confusion_matrix": [
           [
-            3047,
-            1092
+            3049,
+            1090
           ],
           [
-            296,
-            1199
+            295,
+            1200
           ]
         ]
       }
@@ -39,62 +39,61 @@
       "params": {
         "n_estimators": 100,
         "max_depth": 5,
-        "min_samples_leaf": 2,
-        "class_weight": "balanced"
+        "min_samples_leaf": 2
       },
-      "rationale": "The random forest model can capture complex interactions between features and is robust to overfitting, making it a strong candidate for improving classification performance in this imbalanced dataset.",
+      "rationale": "Random forests can capture complex interactions between features and are robust to overfitting, making them a strong candidate for improving classification performance in this dataset.",
       "cv_metrics": {
-        "roc_auc": 0.8435560752156863,
-        "pr_auc": 0.6473760011620462,
-        "f1": 0.6242923314462172,
-        "precision": 0.507319113341698,
-        "recall": 0.811371237458194,
-        "accuracy": 0.7408590699325523,
+        "roc_auc": 0.8439621966109145,
+        "pr_auc": 0.6513455027202392,
+        "f1": 0.5324568611339359,
+        "precision": 0.6900958466453674,
+        "recall": 0.4334448160535117,
+        "accuracy": 0.7980120695775648,
         "confusion_matrix": [
           [
-            2961,
-            1178
+            3848,
+            291
           ],
           [
-            282,
-            1213
+            847,
+            648
           ]
         ]
       }
     }
   ],
   "winner": {
-    "name": "Logistic Regression Baseline",
+    "name": "Logistic Regression Base",
     "estimator": "logistic_regression",
     "cv_metrics": {
-      "roc_auc": 0.8501992225029714,
-      "pr_auc": 0.671189851403825,
-      "f1": 0.6333861595351294,
-      "precision": 0.5233522479266696,
-      "recall": 0.8020066889632107,
-      "accuracy": 0.7536386226482074,
+      "roc_auc": 0.849307953304928,
+      "pr_auc": 0.6696765481593332,
+      "f1": 0.6340819022457067,
+      "precision": 0.5240174672489083,
+      "recall": 0.802675585284281,
+      "accuracy": 0.7541711040113596,
       "confusion_matrix": [
         [
-          3047,
-          1092
+          3049,
+          1090
         ],
         [
-          296,
-          1199
+          295,
+          1200
         ]
       ]
     },
     "test_metrics": {
-      "roc_auc": 0.8494768658451523,
-      "pr_auc": 0.6683511011054882,
-      "f1": 0.6195426195426196,
-      "precision": 0.5068027210884354,
+      "roc_auc": 0.8477950864140121,
+      "pr_auc": 0.6657875091887766,
+      "f1": 0.6176165803108808,
+      "precision": 0.5042301184433164,
       "recall": 0.7967914438502673,
-      "accuracy": 0.7402413058907026,
+      "accuracy": 0.7381121362668559,
       "confusion_matrix": [
         [
-          745,
-          290
+          742,
+          293
         ],
         [
           76,

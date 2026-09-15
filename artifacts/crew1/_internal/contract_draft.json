@@ -1,0 +1,534 @@
+{
+  "target": {
+    "name": "churn",
+    "task_type": "binary_classification",
+    "dtype": {
+      "expected": "int64",
+      "justification": "The target column 'churn' is a binary indicator of whether a customer has left the service, confirmed by the source documentation."
+    },
+    "closed_domain": {
+      "values": [
+        "0",
+        "1"
+      ],
+      "justification": "The values represent 'No' (0) for customers who did not churn and 'Yes' (1) for those who did, forming a closed set of possible outcomes.",
+      "severity": "ERROR"
+    },
+    "nullable": {
+      "value": false,
+      "justification": "Every customer must have a churn status, so null values are not allowed."
+    },
+    "drift": null
+  },
+  "required_features": [
+    "MonthlyCharges",
+    "TotalCharges",
+    "tenure",
+    "gender",
+    "SeniorCitizen",
+    "Partner",
+    "Dependents",
+    "PhoneService",
+    "MultipleLines",
+    "InternetService",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+    "Contract",
+    "PaperlessBilling",
+    "PaymentMethod"
+  ],
+  "excluded_features": [
+    {
+      "name": "customerID",
+      "exclusion_type": "identifier",
+      "enforcement": "hard",
+      "justification": "The 'customerID' column serves as a unique identifier for each customer and should not be used in modeling."
+    }
+  ],
+  "primary_key": {
+    "columns": [
+      "customerID"
+    ],
+    "unique": {
+      "value": true,
+      "justification": "The 'customerID' is unique for each customer, ensuring that each row can be distinctly identified."
+    }
+  },
+  "columns": [
+    {
+      "name": "customerID",
+      "semantic_type": "identifier",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'customerID' is a string that uniquely identifies each customer."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a unique identifier."
+      },
+      "closed_domain": null,
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "gender",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'gender' column contains categorical values representing the gender of the customer."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a gender specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Male",
+          "Female"
+        ],
+        "justification": "The gender column has a fixed set of values, Male and Female.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "SeniorCitizen",
+      "semantic_type": "binary",
+      "dtype": {
+        "expected": "int64",
+        "justification": "The 'SeniorCitizen' column is represented as an integer indicating whether the customer is a senior citizen."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a senior citizen status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "0",
+          "1"
+        ],
+        "justification": "The values represent 'No' (0) for non-seniors and 'Yes' (1) for seniors, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "Partner",
+      "semantic_type": "binary",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'Partner' column indicates whether the customer has a partner, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a partner status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No"
+        ],
+        "justification": "The values represent 'Yes' for customers with partners and 'No' for those without, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "Dependents",
+      "semantic_type": "binary",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'Dependents' column indicates whether the customer has dependents, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a dependents status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No"
+        ],
+        "justification": "The values represent 'Yes' for customers with dependents and 'No' for those without, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "tenure",
+      "semantic_type": "numeric",
+      "dtype": {
+        "expected": "int64",
+        "justification": "The 'tenure' column represents the number of months a customer has been with the company."
+      },
+      "unit": {
+        "value": "months",
+        "evidence": "The source documentation explicitly states that tenure is measured in months.",
+        "confidence": "high"
+      },
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a tenure value specified."
+      },
+      "closed_domain": null,
+      "business_range": {
+        "min": 0.0,
+        "max": 72.0,
+        "justification": "Tenure cannot be negative, and the maximum tenure is capped at 72 months, as per the dataset's context."
+      },
+      "scale_drift": null
+    },
+    {
+      "name": "PhoneService",
+      "semantic_type": "binary",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'PhoneService' column indicates whether the customer has phone service, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a phone service status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No"
+        ],
+        "justification": "The values represent 'Yes' for customers with phone service and 'No' for those without, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "MultipleLines",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'MultipleLines' column indicates whether the customer has multiple lines, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a multiple lines status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No",
+          "No phone service"
+        ],
+        "justification": "The values represent 'Yes' for customers with multiple lines, 'No' for those without, and 'No phone service' for those without phone service, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "InternetService",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'InternetService' column indicates the type of internet service the customer has, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have an internet service type specified."
+      },
+      "closed_domain": {
+        "values": [
+          "DSL",
+          "Fiber optic",
+          "No"
+        ],
+        "justification": "The values represent the types of internet service available, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "OnlineSecurity",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'OnlineSecurity' column indicates whether the customer has online security, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have an online security status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No",
+          "No internet service"
+        ],
+        "justification": "The values represent 'Yes' for customers with online security, 'No' for those without, and 'No internet service' for those without internet service, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "OnlineBackup",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'OnlineBackup' column indicates whether the customer has online backup, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have an online backup status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No",
+          "No internet service"
+        ],
+        "justification": "The values represent 'Yes' for customers with online backup, 'No' for those without, and 'No internet service' for those without internet service, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "DeviceProtection",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'DeviceProtection' column indicates whether the customer has device protection, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a device protection status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No",
+          "No internet service"
+        ],
+        "justification": "The values represent 'Yes' for customers with device protection, 'No' for those without, and 'No internet service' for those without internet service, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "TechSupport",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'TechSupport' column indicates whether the customer has tech support, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a tech support status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No",
+          "No internet service"
+        ],
+        "justification": "The values represent 'Yes' for customers with tech support, 'No' for those without, and 'No internet service' for those without internet service, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "StreamingTV",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'StreamingTV' column indicates whether the customer has streaming TV, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a streaming TV status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No",
+          "No internet service"
+        ],
+        "justification": "The values represent 'Yes' for customers with streaming TV, 'No' for those without, and 'No internet service' for those without internet service, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "StreamingMovies",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'StreamingMovies' column indicates whether the customer has streaming movies, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a streaming movies status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No",
+          "No internet service"
+        ],
+        "justification": "The values represent 'Yes' for customers with streaming movies, 'No' for those without, and 'No internet service' for those without internet service, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "Contract",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'Contract' column indicates the type of contract the customer has, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a contract type specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Month-to-month",
+          "One year",
+          "Two year"
+        ],
+        "justification": "The values represent the types of contracts available, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "PaperlessBilling",
+      "semantic_type": "binary",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'PaperlessBilling' column indicates whether the customer has opted for paperless billing, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a paperless billing status specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Yes",
+          "No"
+        ],
+        "justification": "The values represent 'Yes' for customers with paperless billing and 'No' for those without, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "PaymentMethod",
+      "semantic_type": "categorical",
+      "dtype": {
+        "expected": "str",
+        "justification": "The 'PaymentMethod' column indicates the method of payment the customer uses, represented as a string."
+      },
+      "unit": null,
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a payment method specified."
+      },
+      "closed_domain": {
+        "values": [
+          "Electronic check",
+          "Mailed check",
+          "Bank transfer (automatic)",
+          "Credit card (automatic)"
+        ],
+        "justification": "The values represent the types of payment methods available, forming a closed set of possible outcomes.",
+        "severity": "ERROR"
+      },
+      "business_range": null,
+      "scale_drift": null
+    },
+    {
+      "name": "MonthlyCharges",
+      "semantic_type": "monetary",
+      "dtype": {
+        "expected": "float64",
+        "justification": "The 'MonthlyCharges' column represents the monthly charge for the customer, confirmed by the source documentation."
+      },
+      "unit": {
+        "value": "currency_unspecified",
+        "evidence": "The dataset does not specify the currency for monetary columns, including MonthlyCharges.",
+        "confidence": "high"
+      },
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have a monthly charge specified."
+      },
+      "closed_domain": null,
+      "business_range": {
+        "min": 18.25,
+        "max": 118.75,
+        "justification": "Monthly charges cannot be negative, and the observed range is between 18.25 and 118.75."
+      },
+      "scale_drift": {
+        "median_rel_tolerance": 0.1,
+        "justification": "A significant shift in monthly charges would indicate a potential scale change in customer billing.",
+        "severity": "ERROR"
+      }
+    },
+    {
+      "name": "TotalCharges",
+      "semantic_type": "monetary",
+      "dtype": {
+        "expected": "float64",
+        "justification": "The 'TotalCharges' column represents the total charges for the customer, confirmed by the source documentation."
+      },
+      "unit": {
+        "value": "currency_unspecified",
+        "evidence": "The dataset does not specify the currency for monetary columns, including TotalCharges.",
+        "confidence": "high"
+      },
+      "nullable": {
+        "value": false,
+        "justification": "Every customer must have total charges specified."
+      },
+      "closed_domain": null,
+      "business_range": null,
+      "scale_drift": null
+    }
+  ],
+  "assumptions": [
+    "The dataset's 'customers' and 'churn this quarter' framing is treated as a single-snapshot cross-section (one row per customer, one observation point).",
+    "The encoding of 'SeniorCitizen' as 0/1 is assumed to mean the same boolean sense as 'Yes'/'No' in the other flag columns."
+  ]
+}

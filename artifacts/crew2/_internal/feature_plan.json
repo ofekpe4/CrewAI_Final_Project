@@ -7,16 +7,19 @@
       "customerID"
     ],
     "constraints_relied_upon": [
-      "The churn column is encoded as '1' for churned and '0' for not churned.",
-      "The customerID serves as a unique identifier for each customer and should not be used in modeling."
+      "The target column 'churn' is a binary indicator of whether a customer has left the service, confirmed by the source documentation.",
+      "The values represent 'No' (0) for customers who did not churn and 'Yes' (1) for those who did, forming a closed set of possible outcomes.",
+      "Every customer must have a churn status, so null values are not allowed."
     ]
   },
   "use_features": [
+    "MonthlyCharges",
+    "TotalCharges",
+    "tenure",
     "gender",
     "SeniorCitizen",
     "Partner",
     "Dependents",
-    "tenure",
     "PhoneService",
     "MultipleLines",
     "InternetService",
@@ -28,9 +31,7 @@
     "StreamingMovies",
     "Contract",
     "PaperlessBilling",
-    "PaymentMethod",
-    "MonthlyCharges",
-    "TotalCharges"
+    "PaymentMethod"
   ],
   "derived": [],
   "transforms": [

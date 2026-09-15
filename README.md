@@ -5,7 +5,7 @@ Two CrewAI crews separated by a **machine-enforced dataset contract** and a
 *seam*: a contract that one crew writes and the other must honour, and a Flow that
 checks it before anything downstream is allowed to run.
 
-> **Status: Phases 0–7 complete — both crews implemented.**
+> **Status: Phases 0–8 complete — both crews + the Flow implemented.**
 > The environment and core infrastructure exist and are tested (Phase 0). The
 > CrewAI execution-pattern spike is resolved (Phase 1): **Pattern A** — one
 > `Crew` of 3 sequential `Task`s per crew, each with `output_pydantic` +
@@ -42,13 +42,28 @@ checks it before anything downstream is allowed to run.
 > proven (not merely prompted) in `tests/integration/test_crew2_tool_surface.py`.
 > Deterministic Python (`ml/train.py` + `ml/evaluate.py`) trains every
 > variant, computes every metric, and selects the winner by `argmax` — an
-> LLM never trains a model or picks a winner. A real, live run against the
-> actual OpenAI API produced all four required Crew 2 artifacts
-> (`features.csv`, `model.joblib`, `evaluation_report.md`, `model_card.md`)
-> from the real, gate-passed Crew 1 handoff.
-> **The Flow and the Streamlit app are *not* implemented yet** — both crews
-> currently run through their own standalone scripts
-> (`scripts/run_crew1.py`, `scripts/run_crew2.py`), not a single pipeline.
+> LLM never trains a model or picks a winner.
+> **Both crews are now wired into ONE real CrewAI Flow (Phase 8)**:
+> `python scripts/run_pipeline.py` (`make run`) executes the complete
+> pipeline — load dataset → Crew 1 → optional fault injection → the
+> deterministic Phase 4 gate → a real `@router` → Crew 2 → verification →
+> `run_summary.json`/`run_metadata.json`. **The gate is the sole blocking
+> PASS/FAIL authority; Crew 2 is structurally unreachable on a FAIL** —
+> `run_scientist_crew` listens only to the `"gate_passed"` route label the
+> deterministic gate's own router emits, proven in
+> `tests/unit/test_pipeline_flow.py` (73/73 checks, zero LLM calls) by a
+> real `Crew 2 kickoff call count == 0` assertion on a gate failure. A real,
+> live `make run` against the actual OpenAI API produced all **eight**
+> required artifacts and finished `status=completed` (`Logistic Regression
+> Base`, `roc_auc=0.8478`). `--validate-only` (gate-only, both crews
+> skipped) and `--replay-plans` (deterministic zero-LLM-call replay of the
+> stored, guardrail-accepted plans) are both implemented and live-verified
+> — replaying the very artifacts the live run above produced reproduced the
+> **identical** `roc_auc=0.8477950864140121`. `--inject-failure
+> scale_change` (`make demo-fail`) mutates a run-scoped copy of the Crew 1
+> handoff only (never the committed artifacts) and is proven, offline, to
+> block Crew 2 with a `SUSPECTED SCALE CHANGE` finding.
+> **The Streamlit app is *not* implemented yet** (Phase 9).
 > See [Project status](#project-status) below.
 
 ---
@@ -176,6 +191,37 @@ cp .env.example .env
 
 ---
 
+## Running the pipeline
+
+The real, production CrewAI `Flow` (`src/harbor_vale/flow/pipeline_flow.py`,
+`scripts/run_pipeline.py`) — see "Done — Phase 8: the Flow" under
+[Project status](#project-status) for what it does internally.
+
+```bash
+make run                                    # full pipeline: Crew 1 -> gate -> Crew 2 (needs OPENAI_API_KEY)
+make validate                               # gate-only, against the existing artifacts/crew1/* (no API key needed)
+make replay                                 # deterministic replay of the stored, accepted agent plans (zero LLM calls)
+make demo-fail                              # inject the mandatory scale_change fault; the gate blocks Crew 2
+make flow-diagram                           # regenerate docs/flow_diagram.html via the real flow.plot()
+
+# equivalent direct invocations:
+python scripts/run_pipeline.py
+python scripts/run_pipeline.py --validate-only
+python scripts/run_pipeline.py --replay-plans
+python scripts/run_pipeline.py --inject-failure scale_change
+```
+
+Every run writes `artifacts/run_summary.json` (status, failure category, Crew
+1/2 state, validation state, best model/metric — the application's future
+source of truth) and `artifacts/run_metadata.json` (real package versions,
+seeds, LLM model, prompt-config hash, dataset SHA256, git commit) plus a
+per-run log at `logs/pipeline_<run_id>.log`. **On any failure, `crew2.started`
+is explicitly `false` in `run_summary.json`, with a clear reason** — the
+deterministic gate is the sole blocking PASS/FAIL authority, and Crew 2 is
+structurally unreachable on a FAIL (`tests/unit/test_pipeline_flow.py`).
+
+---
+
 ## Project structure
 
 ```
@@ -204,18 +250,25 @@ CrewAI_Final_Project/
 │   ├── demo/fault_injection.py  # deterministic mutation helpers (tests-only) [implemented — Phase 4]
 │   ├── crews/analyst_crew/                                              # Crew 1 [implemented — Phase 6]
 │   ├── crews/scientist_crew/                                            # Crew 2 [implemented — Phase 7]
-│   └── flow/                                                           # (placeholder — Phase 8)
+│   └── flow/                    # state.py · pipeline_flow.py · replay.py ·
+│                                 # run_summary.py · run_metadata.py    [implemented — Phase 8]
 │
 ├── app/                        # Streamlit UI                          (placeholder — Phase 9)
 ├── data/raw/                   # downloaded datasets, git-ignored      [implemented — Phase 2]
-├── artifacts/{crew1,validation,crew2}/                                 (placeholders — run outputs)
-├── scripts/{download_data.py, calibrate_validation_tolerances.py}      [implemented — Phase 2, 4]
+├── artifacts/{crew1,validation,crew2}/                                 [implemented — run outputs]
+├── artifacts/{run_summary.json,run_metadata.json}                      [implemented — Phase 8]
+├── runs/<run_id>/{handoff,replay}/  # run-scoped scratch, git-ignored  [implemented — Phase 8]
+├── scripts/{download_data.py, calibrate_validation_tolerances.py,
+│            run_crew1.py, run_crew2.py, run_pipeline.py,
+│            generate_flow_diagram.py}                     [implemented — Phase 2, 4, 6, 7, 8]
+├── Makefile                     # run · validate · replay · demo-fail · flow-diagram [implemented — Phase 8]
 ├── spike/                       # Phase 1 disposable spikes (task_1_1..task_1_6) [evidence]
-├── docs/architecture.md         # orchestration decision + CrewAI 1.15.20 findings [Phase 1, corrected Phase 3, 5]
+├── docs/architecture.md         # orchestration decision + CrewAI 1.15.20 findings [Phase 1, corrected 3, 5, 8]
 ├── docs/contract_spec.md        # Dataset Contract specification                  [Phase 3]
 ├── docs/validation_calibration.md # scale/drift tolerance calibration evidence   [Phase 4]
+├── docs/flow_diagram.{html,css,js}  # the real flow.plot() output               [Phase 8]
 ├── tests/{unit,integration,failure,smoke,fixtures}/
-│   └── unit/  — Phase 0–5 unit tests (see "Running the tests" above)  [implemented]
+│   └── unit/  — Phase 0–8 unit tests (see "Running the tests" above)  [implemented]
 └── working flow/               # per-session development log
 ```
 
@@ -258,6 +311,7 @@ python tests/unit/test_hardcoded_e2e.py                                       # 
 python tests/unit/test_analyst_crew.py                                          # Phase 6 — Crew 1, scripted LLM, zero API key ⭐
 python tests/unit/test_scientist_crew.py                                         # Phase 7 — Crew 2, scripted LLM, zero API key ⭐
 python tests/integration/test_crew2_tool_surface.py                              # Phase 7 — handoff boundary security ⭐
+python tests/unit/test_pipeline_flow.py                                          # Phase 8 — the Flow, mocked crews, zero API key ⭐
 ```
 
 Each prints `PASS`/`FAIL` per check and exits non-zero on any failure. Once
@@ -509,31 +563,91 @@ EXACTLY two allowlisted logical names (§G.0) — never a filesystem path.
 - [x] `docs/agent_design.md` — all three Crew 2 agents documented against
       the Plan's 9-point structure.
 
+### Done — Phase 8: the Flow ⭐
+
+One real CrewAI `Flow[PipelineState]` — `src/harbor_vale/flow/pipeline_flow.py`
+— wires the already-proven Crew 1, Crew 2, and the deterministic Phase 4 gate
+into a single pipeline with a real `@start`/`@listen`/`@router`/`or_` graph.
+
+- [x] **`PipelineState`** (`flow/state.py`) — run id/status/failure category,
+      execution mode, Crew 1/2 completion + degradation, validation
+      passed/errors/warnings, best model/metric. Never a dumping ground for
+      DataFrames, prompts, or Crew/API objects.
+- [x] **The real graph**: `start_pipeline` → `load_dataset` →
+      `run_analyst_crew` → `inject_fault_if_requested` → `validate_handoff`
+      → `gate_router` → `{"gate_failed" → halt_pipeline | "gate_passed" →
+      run_scientist_crew → verify_crew2_outputs → finalize_success |
+      "validation_only_complete" → finalize_validate_only}` →
+      `write_run_summary`. **`run_scientist_crew` listens ONLY to the
+      `"gate_passed"` label** the deterministic gate's own router emits —
+      structurally, not merely an `if`-guard — so Crew 2 is absent from any
+      execution branch the router doesn't emit that label on.
+- [x] **Run-scoped handoff snapshot** (`runs/<run_id>/handoff/`) — the exact
+      four files the gate validates are the exact two files (via the same
+      `ExactFileAllowlist`) Crew 2 is bound to if the gate passes.
+- [x] **Fault injection**, wired for real: `--inject-failure scale_change`
+      (`make demo-fail`) mutates ONLY the run-scoped snapshot's
+      `clean_data.csv` (×100 on `MonthlyCharges`, the real declared
+      `scale_drift` column), strictly after Crew 1's final artifacts are
+      written and before the gate. A complete no-op when no flag is given —
+      proven by `test_no_fault_injection_in_default_run`.
+- [x] **`--validate-only`** — skips both crews entirely, runs the gate
+      against the existing on-disk `artifacts/crew1/*`, never overwrites
+      what it validates. **`--replay-plans`** — zero-LLM-call deterministic
+      replay of the stored, guardrail-re-validated agent plans
+      (`CleaningPlan`, `ContractDraft`, `FeaturePlan`, `ExperimentPlan`)
+      through the exact same deterministic executors a live run uses;
+      writes into its own `runs/<run_id>/replay/` workspace, never the real
+      `artifacts/` trees.
+- [x] **`run_summary.json`** / **`run_metadata.json`** — the Flow's
+      complete, secret-free, machine-readable account of one run (status,
+      failure category/summary, Crew 1/2 state, validation state, best
+      model/metric, real package versions, seeds, prompt-config hash,
+      dataset SHA256, git commit).
+- [x] **73/73 offline Flow checks, zero LLM calls, zero API key**
+      (`tests/unit/test_pipeline_flow.py`) — gate blocking/allowing (Crew 2
+      kickoff call count `== 0` on FAIL, exactly `1` on PASS), the
+      fault-injection ordering proof (`SUSPECTED SCALE CHANGE` +
+      `INTEGRITY_SHA256_MATCH` ERROR, `crew2_started == False`),
+      `--validate-only`'s PASS/FAIL sub-cases, a genuine Crew crash vs. a
+      reported critical-agent failure, and replay's zero-LLM-call
+      reproducibility (contract bytes, winner, and metric value identical
+      across two replay runs, verified against the real, unmocked gate).
+- [x] **`docs/flow_diagram.html`** — the real `flow.plot()` output (not
+      hand-drawn), regenerable via `make flow-diagram`.
+- [x] **A real, live `make run`** against the actual OpenAI API produced
+      all **eight** required artifacts end to end and finished
+      `status=completed` (`Logistic Regression Base`, `roc_auc=0.8478`).
+      `make replay` against that same live run's stored plans reproduced
+      the **identical** `roc_auc=0.8477950864140121` with zero LLM calls.
+
 ### Not started
 
 Everything else. Specifically **not implemented and not working yet**:
 
-- The **Flow** orchestration and failure demo (Phases 8, 10) — the Phase 4
-  gate currently runs as a manual precondition inside `scripts/run_crew2.py`,
-  not through a `Flow`/router.
 - **Streamlit** app (Phase 9).
-
-There is no full end-to-end pipeline yet (`make run` / `make demo-fail` do not
-exist) — but each crew is runnable live on its own:
-`python scripts/run_crew1.py` then `python scripts/run_crew2.py` (both need a
-real `OPENAI_API_KEY` in `.env`).
+- The full polished failure-demo suite/screenshots (Phase 10) — the core
+  `scale_change` fault route itself is already wired and proven
+  (`make demo-fail`, `tests/unit/test_pipeline_flow.py`); Phase 10 owns the
+  complete failure catalog and demo polish.
 
 ---
 
-## Reproducibility (planned framing)
+## Reproducibility
 
-The deterministic layer of this pipeline is intended to be fully reproducible:
-given the same inputs and the same stored agent plans, it produces identical
-artifacts. The agent layer is not — LLM outputs vary between runs. That is
-precisely why every agent decision is captured as a structured plan artifact, and
-why all execution is performed by deterministic Python. Seeds
-(`PYTHONHASHSEED=0`, `numpy` 42, sklearn `random_state=42`) are pinned in
-`config/settings.yaml`.
+> The deterministic layer of this pipeline is fully reproducible: given the
+> same inputs and the same stored agent plans, it produces identical
+> artifacts. The agent layer is not — LLM outputs vary between runs. That is
+> precisely why every agent decision is captured as a structured plan
+> artifact, and why all execution is performed by deterministic Python.
+
+This is now live-verified, not just a stated intent: `make replay` against
+the stored plans from the Phase 8 live acceptance run reproduced the exact
+same winner and the exact same `roc_auc` (`0.8477950864140121`) with **zero**
+LLM calls. Seeds (`PYTHONHASHSEED=0`, `numpy` 42, sklearn
+`random_state=42`) are pinned in `config/settings.yaml` and recorded, along
+with real package versions, the prompt-config hash, the dataset SHA256, and
+the git commit, in every run's `artifacts/run_metadata.json`.
 
 ---
 
