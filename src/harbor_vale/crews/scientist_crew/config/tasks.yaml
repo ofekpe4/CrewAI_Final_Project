@@ -1,0 +1,118 @@
+# Crew 2 — Data Scientist Crew — Task definitions (PROJECT_PLAN.md §G.1-G.3,
+# §C.2.2 Pattern A). `output_pydantic`, `guardrail`, `callback`, `context=`
+# are wired in Python (scientist_crew.py) — this file holds only the
+# natural-language description/expected_output every Task also needs.
+
+feature_engineer_task:
+  description: >
+    Crew 1 has already produced an approved, gate-passed handoff: exactly
+    two files, reachable ONLY through the `read_handoff` tool with the
+    logical name `"clean_data"` or `"dataset_contract"` — there is no other
+    way to reach any Crew 1 data, and no path parameter exists on any tool
+    you have.
+
+    Follow this exact three-step grounding process before writing a single
+    column name into your FeaturePlan — every rejected plan in this
+    project's history was rejected because a column name was reconstructed
+    from memory instead of read from the real contract:
+
+    STEP 1 — call `read_handoff` with `"dataset_contract"` and read its
+    `columns`, `required_features`, and `excluded_features` fields in full.
+    These are the ONLY column names that exist for this run.
+
+    STEP 2 — call `profile_handoff_data` and treat its returned column
+    names as confirmation of the SAME vocabulary STEP 1 gave you — not a
+    second, different naming convention. If a name in the contract is
+    `customerID` or `MonthlyCharges`, you use exactly that spelling; you
+    never lowercase it, never insert underscores, and never assume a
+    snake_case version exists just because that would look tidier.
+
+    STEP 3 — before finalizing your `FeaturePlan`, mechanically re-check
+    every column name you used in `use_features`, `dropped`,
+    `advisory_overrides`, `transforms`, and `encoders` against STEP 1's
+    actual `columns` list. Five concrete forbidden patterns: (a)
+    reconstructing snake_case from a PascalCase/camelCase contract name,
+    (b) the reverse — inventing PascalCase from a snake_case contract name,
+    (c) using a name from `data/README.md` or any other document instead of
+    the contract's own declared name, (d) referring to the identifier
+    column under any spelling other than the contract's real one, (e)
+    inventing a column that does not appear in the contract at all.
+
+    Now decide: include every entry in `required_features`. Never include
+    any column the contract marks `hard`-excluded — it is permanently off
+    limits, regardless of how predictive it might look. A column marked
+    `advisory`-excluded may be included, but only with an
+    `advisory_overrides` entry giving a specific, concrete justification
+    for why it is legitimately usable for THIS dataset — never a generic
+    placeholder like "seems useful." Consider a `log1p` transform for any
+    right-skewed monetary column the profile shows, and an explicit
+    `onehot` or `ordinal` encoder for every categorical column you use — an
+    unencoded categorical feature will fail when Python tries to build it.
+    Fill in `contract_acknowledgment` truthfully: the exact
+    `contract_version` you read in STEP 1, and honest confirmation that you
+    respected every required and excluded feature.
+
+    You never touch the raw dataset, never fit a preprocessor, and never
+    write `features.csv` yourself — that is entirely deterministic Python's
+    job, from the plan you produce here.
+  expected_output: >
+    A FeaturePlan: `contract_acknowledgment`, `use_features`, optionally
+    `derived`/`transforms`/`encoders`/`dropped`/`advisory_overrides` — every
+    column name copied character-for-character from the real
+    `dataset_contract` you read via `read_handoff`.
+
+modeling_specialist_task:
+  description: >
+    Call `read_handoff` with `"dataset_contract"` to see the target's
+    `task_type` and measured `positive_rate`. Call `read_feature_plan` to
+    see the FeaturePlan Crew 2's own Feature Engineer already produced and
+    had approved this run.
+
+    Propose an ExperimentPlan with a `primary_metric` you can justify in
+    one or two sentences given the measured class balance, and at least two
+    model variants. Every variant's `estimator` MUST be exactly one of
+    `logistic_regression`, `random_forest`, or `gradient_boosting` — this
+    project intentionally freezes the model family set; no other family,
+    no hyperparameter search, no tuning procedure. Every hyperparameter you
+    set must be a plain, defensible value from the closed allowlist for
+    that estimator; never set `random_state` yourself. Give each variant a
+    one-sentence rationale for why it is worth comparing against the
+    others.
+
+    You never train a model, never see the test set, and never decide
+    which variant wins — deterministic Python executes your plan, measures
+    every metric, and selects the winner by your declared `primary_metric`
+    alone.
+  expected_output: >
+    An ExperimentPlan: `primary_metric`, `metric_rationale`, `cv_folds`,
+    and at least two `variants`, each with a unique `name`, an allowed
+    `estimator`, allowlisted `params`, and a `rationale`.
+
+responsible_ai_documenter_task:
+  description: >
+    Call `read_handoff` with `"dataset_contract"` to see the contract's own
+    declared `assumptions`. Call `read_feature_plan` and
+    `read_experiment_results` to see Crew 2's own approved FeaturePlan and
+    the real, machine-measured `experiments.json` results for this run.
+
+    Write a ModelCard. Every entry in `metrics_summary` MUST cite a metric
+    name, split (`cv` or `test`), variant name, and value that are all
+    EXACTLY what `read_experiment_results` actually returned — an invented
+    metric, a metric for a variant that does not exist, or a value that
+    does not match the real measured number is mechanically rejected;
+    never round or restate a number differently than what you read.
+    `contract_dependencies` must include at least one string copied
+    EXACTLY from the contract's own `assumptions` list — translate it into
+    an operational limitation (for example: an undocumented currency means
+    this model assumes the measurement scale stays constant, and an
+    upstream unit change would silently invalidate its predictions, which
+    is exactly the kind of incident this project's validation gate exists
+    to catch). Never claim a fairness, bias, or protected-class metric was
+    measured — none was; say so as a limitation if it is relevant, never
+    imply otherwise. Never rewrite or contradict `evaluation_report.md`.
+  expected_output: >
+    A ModelCard: `purpose`, `intended_use`, `out_of_scope_use`,
+    `training_data_summary`, `metrics_summary` (every value mechanically
+    verifiable against `experiments.json`), `limitations`,
+    `ethical_considerations`, `contract_dependencies` (at least one real
+    contract assumption), `monitoring_recommendations`.

@@ -14,6 +14,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
+from sklearn.impute import SimpleImputer
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import (
     FunctionTransformer,
     MinMaxScaler,
@@ -70,6 +72,25 @@ _ENCODER_FACTORIES = {
 }
 
 
+def _numeric_pipeline(transformer) -> Pipeline:  # noqa: ANN001
+    """Impute (median) then apply `transformer`. A real-world numeric column
+    can carry a genuine, contract-observed null (e.g. `TotalCharges` for a
+    brand-new customer, if a cleaning run leaves it unimputed) — some
+    transformers here (`StandardScaler`) silently pass a NaN straight
+    through, and no sklearn estimator this project trains accepts one.
+    `SimpleImputer` fits only on the same training/fold data the rest of
+    the `Pipeline` fits on, so this stays leakage-safe (§G.2's "אפס דליפה
+    בין folds")."""
+    return Pipeline(steps=[("impute", SimpleImputer(strategy="median")), ("scale", transformer)])
+
+
+def _categorical_pipeline(transformer) -> Pipeline:  # noqa: ANN001
+    """Same NaN-safety guarantee as `_numeric_pipeline`, for a categorical
+    column — a missing category is imputed with the column's most frequent
+    value before encoding, never left to reach the estimator."""
+    return Pipeline(steps=[("impute", SimpleImputer(strategy="most_frequent")), ("encode", transformer)])
+
+
 def build_preprocessor(
     plan: FeaturePlan, df_with_derived: "pd.DataFrame"
 ) -> tuple[ColumnTransformer, list[str]]:
@@ -107,10 +128,10 @@ def build_preprocessor(
             raise FeatureBuildError(f"feature {name!r} is not present in the data")
         if name in encoded_columns:
             kind = encoded_columns[name]
-            transformers.append((f"encode_{name}", _ENCODER_FACTORIES[kind](), [name]))
+            transformers.append((f"encode_{name}", _categorical_pipeline(_ENCODER_FACTORIES[kind]()), [name]))
         elif name in transformed_columns:
             kind = transformed_columns[name]
-            transformers.append((f"transform_{name}", _TRANSFORM_FACTORIES[kind](), [name]))
+            transformers.append((f"transform_{name}", _numeric_pipeline(_TRANSFORM_FACTORIES[kind]()), [name]))
         else:
             if not _column_dtype_is_numeric(df_with_derived[name]):
                 raise FeatureBuildError(
@@ -120,7 +141,7 @@ def build_preprocessor(
             passthrough_numeric.append(name)
 
     if passthrough_numeric:
-        transformers.append(("scale_passthrough", StandardScaler(), passthrough_numeric))
+        transformers.append(("scale_passthrough", _numeric_pipeline(StandardScaler()), passthrough_numeric))
 
     preprocessor = ColumnTransformer(transformers=transformers, remainder="drop")
     return preprocessor, all_feature_names

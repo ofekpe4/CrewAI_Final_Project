@@ -5,7 +5,7 @@ Two CrewAI crews separated by a **machine-enforced dataset contract** and a
 *seam*: a contract that one crew writes and the other must honour, and a Flow that
 checks it before anything downstream is allowed to run.
 
-> **Status: Phases 0–6 complete.**
+> **Status: Phases 0–7 complete — both crews implemented.**
 > The environment and core infrastructure exist and are tested (Phase 0). The
 > CrewAI execution-pattern spike is resolved (Phase 1): **Pattern A** — one
 > `Crew` of 3 sequential `Task`s per crew, each with `output_pydantic` +
@@ -34,7 +34,21 @@ checks it before anything downstream is allowed to run.
 > narrative-agent failure degrades visibly instead. A real, live run against
 > the actual OpenAI API and the real Telco dataset produced a
 > `dataset_contract.json` that **passes the Phase 4 gate with zero errors**.
-> **Crew 2, the Flow, and the Streamlit app are *not* implemented yet.**
+> **Crew 2 (Data Scientist) is now implemented and live-run-verified (Phase
+> 7)**: three real CrewAI agents — Feature Engineer, Modeling &
+> Experimentation Specialist, Responsible AI Documenter — reach Crew 1's
+> output through EXACTLY two allowlisted files (`clean_data.csv`,
+> `dataset_contract.json`), never raw data or Crew 1 internals, mechanically
+> proven (not merely prompted) in `tests/integration/test_crew2_tool_surface.py`.
+> Deterministic Python (`ml/train.py` + `ml/evaluate.py`) trains every
+> variant, computes every metric, and selects the winner by `argmax` — an
+> LLM never trains a model or picks a winner. A real, live run against the
+> actual OpenAI API produced all four required Crew 2 artifacts
+> (`features.csv`, `model.joblib`, `evaluation_report.md`, `model_card.md`)
+> from the real, gate-passed Crew 1 handoff.
+> **The Flow and the Streamlit app are *not* implemented yet** — both crews
+> currently run through their own standalone scripts
+> (`scripts/run_crew1.py`, `scripts/run_crew2.py`), not a single pipeline.
 > See [Project status](#project-status) below.
 
 ---
@@ -189,7 +203,7 @@ CrewAI_Final_Project/
 │   ├── templates/                # eda_report.html · insights.md · styles.css (Jinja2) [implemented — Phase 5]
 │   ├── demo/fault_injection.py  # deterministic mutation helpers (tests-only) [implemented — Phase 4]
 │   ├── crews/analyst_crew/                                              # Crew 1 [implemented — Phase 6]
-│   ├── crews/scientist_crew/                                            # (placeholder — Phase 7)
+│   ├── crews/scientist_crew/                                            # Crew 2 [implemented — Phase 7]
 │   └── flow/                                                           # (placeholder — Phase 8)
 │
 ├── app/                        # Streamlit UI                          (placeholder — Phase 9)
@@ -242,6 +256,8 @@ python tests/unit/test_model_selection.py                                   # Ph
 python tests/unit/test_plans_validation.py                                   # Phase 5 — guardrail parser contract
 python tests/unit/test_hardcoded_e2e.py                                       # Phase 5 — full E2E on real data ⭐ (~35s)
 python tests/unit/test_analyst_crew.py                                          # Phase 6 — Crew 1, scripted LLM, zero API key ⭐
+python tests/unit/test_scientist_crew.py                                         # Phase 7 — Crew 2, scripted LLM, zero API key ⭐
+python tests/integration/test_crew2_tool_surface.py                              # Phase 7 — handoff boundary security ⭐
 ```
 
 Each prints `PASS`/`FAIL` per check and exits non-zero on any failure. Once
@@ -439,22 +455,73 @@ Phase 1) — `src/harbor_vale/crews/analyst_crew/`.
 - [x] `docs/agent_design.md` — all three agents documented against the
       Plan's 9-point structure.
 
+### Done — Phase 7: Crew 2 — Data Scientist Crew ⭐
+
+One `Crew`, three `Agent`s, three `Task`s, `Process.sequential` (Pattern A)
+— `src/harbor_vale/crews/scientist_crew/`. Reaches Crew 1's output through
+EXACTLY two allowlisted logical names (§G.0) — never a filesystem path.
+
+- [x] **Two-file handoff boundary, mechanically proven** — `read_handoff`'s
+      `name` parameter is a `Literal["clean_data", "dataset_contract"]`
+      INLINED directly in the tool signature (a named module-level alias
+      breaks CrewAI's tool-schema construction — `docs/architecture.md`
+      Finding 3). `tests/integration/test_crew2_tool_surface.py` proves,
+      through the real `@tool`-wrapped functions, that raw data,
+      `artifacts/crew1/_internal/*`, `insights.md`, `eda_report.html`, and
+      `validation_report.json` all raise `HandoffAccessDenied` — including
+      `../` traversal, absolute paths, and symlink escapes.
+- [x] **Feature Engineer** 🔴 critical — reads the contract + a real
+      measured profile, produces a guardrail-validated `FeaturePlan`
+      cross-checked against the ACTUAL current contract (hard exclusions
+      blocked, required features enforced, advisory overrides require a
+      justification); a deterministic callback builds `features.csv` via
+      the Phase 5 leakage-safe `ColumnTransformer` (never fit on the full
+      dataset).
+- [x] **Modeling & Experimentation Specialist** 🔴 critical — proposes
+      ≥2 variants from the frozen `logistic_regression` /
+      `random_forest` / `gradient_boosting` set with a business-justified
+      primary metric; a deterministic callback runs the exact approved
+      protocol (`train_test_split(test_size=0.2, stratify=y,
+      random_state=42)`, 5-fold `StratifiedKFold`, preprocessing inside
+      the `Pipeline`, test set touched once) and **Python — never the
+      LLM — selects the winner** by `argmax` over cross-validated metrics.
+- [x] **Responsible AI Documenter** 🟡 narrative — every `MetricClaim` in
+      the `ModelCard` is mechanically verified against the real
+      `experiments.json`; `contract_dependencies` must cite a real
+      contract assumption verbatim; a fabricated/unverifiable metric
+      claim triggers the same proven forced-accept degraded-fallback
+      mechanism Crew 1's narrative agent uses — Crew 2 still completes,
+      with a visible `⚠️ Narrative sections auto-generated` banner.
+- [x] **88 mocked/offline + security-integration checks**
+      (`tests/unit/test_scientist_crew.py`,
+      `tests/integration/test_crew2_tool_surface.py`) — zero API key,
+      zero network — covering Pattern A structure, the happy path, both
+      critical-agent halts, the narrative fallback, and the full handoff
+      denylist.
+- [x] **A real, live acceptance run** against the actual OpenAI API and the
+      real, gate-passed Crew 1 handoff produced all four required
+      artifacts. One code-level fix between the first and second live run
+      (not a prompt change): the real `clean_data.csv` still carries
+      measured nulls in `TotalCharges`, and `ml/features.py`'s
+      preprocessor had no NaN-handling case — fixed with `SimpleImputer`
+      inside the existing leakage-safe `Pipeline`
+      (`working flow/2026-09-15_session-27.md`).
+- [x] `docs/agent_design.md` — all three Crew 2 agents documented against
+      the Plan's 9-point structure.
+
 ### Not started
 
 Everything else. Specifically **not implemented and not working yet**:
 
-- **Crew 2** (Data Scientist) (Phase 7) — the deterministic tools exist as
-  plain functions; Crew 2's `Agent`/`Task`/`Crew` definitions do not exist
-  yet.
-- The **Flow** orchestration and failure demo (Phases 8, 10).
+- The **Flow** orchestration and failure demo (Phases 8, 10) — the Phase 4
+  gate currently runs as a manual precondition inside `scripts/run_crew2.py`,
+  not through a `Flow`/router.
 - **Streamlit** app (Phase 9).
-- Any trained **model** actually served, evaluation report, or model card
-  as a real production artifact (the Phase 5 proof's model/reports exist
-  only in an isolated test workspace, never in `artifacts/`).
 
 There is no full end-to-end pipeline yet (`make run` / `make demo-fail` do not
-exist) — but Crew 1 alone is runnable live: `python scripts/run_crew1.py`
-(needs a real `OPENAI_API_KEY` in `.env`).
+exist) — but each crew is runnable live on its own:
+`python scripts/run_crew1.py` then `python scripts/run_crew2.py` (both need a
+real `OPENAI_API_KEY` in `.env`).
 
 ---
 

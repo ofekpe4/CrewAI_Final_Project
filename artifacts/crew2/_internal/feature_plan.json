@@ -1,0 +1,114 @@
+{
+  "contract_acknowledgment": {
+    "contract_version": "1.0.0",
+    "target_confirmed": true,
+    "required_features_confirmed": true,
+    "excluded_features_respected": [
+      "customerID"
+    ],
+    "constraints_relied_upon": [
+      "The churn column is encoded as '1' for churned and '0' for not churned.",
+      "The customerID serves as a unique identifier for each customer and should not be used in modeling."
+    ]
+  },
+  "use_features": [
+    "gender",
+    "SeniorCitizen",
+    "Partner",
+    "Dependents",
+    "tenure",
+    "PhoneService",
+    "MultipleLines",
+    "InternetService",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+    "Contract",
+    "PaperlessBilling",
+    "PaymentMethod",
+    "MonthlyCharges",
+    "TotalCharges"
+  ],
+  "derived": [],
+  "transforms": [
+    {
+      "column": "MonthlyCharges",
+      "kind": "log1p"
+    },
+    {
+      "column": "TotalCharges",
+      "kind": "log1p"
+    }
+  ],
+  "encoders": [
+    {
+      "column": "gender",
+      "kind": "onehot"
+    },
+    {
+      "column": "SeniorCitizen",
+      "kind": "ordinal"
+    },
+    {
+      "column": "Partner",
+      "kind": "onehot"
+    },
+    {
+      "column": "Dependents",
+      "kind": "onehot"
+    },
+    {
+      "column": "PhoneService",
+      "kind": "onehot"
+    },
+    {
+      "column": "MultipleLines",
+      "kind": "onehot"
+    },
+    {
+      "column": "InternetService",
+      "kind": "onehot"
+    },
+    {
+      "column": "OnlineSecurity",
+      "kind": "onehot"
+    },
+    {
+      "column": "OnlineBackup",
+      "kind": "onehot"
+    },
+    {
+      "column": "DeviceProtection",
+      "kind": "onehot"
+    },
+    {
+      "column": "TechSupport",
+      "kind": "onehot"
+    },
+    {
+      "column": "StreamingTV",
+      "kind": "onehot"
+    },
+    {
+      "column": "StreamingMovies",
+      "kind": "onehot"
+    },
+    {
+      "column": "Contract",
+      "kind": "onehot"
+    },
+    {
+      "column": "PaperlessBilling",
+      "kind": "onehot"
+    },
+    {
+      "column": "PaymentMethod",
+      "kind": "onehot"
+    }
+  ],
+  "dropped": [],
+  "advisory_overrides": []
+}
