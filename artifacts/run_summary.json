@@ -1,0 +1,29 @@
+{
+  "run_id": "20260915T122449Z-ff7101ea",
+  "status": "halted_agent_failure",
+  "failure_category": "agent_output",
+  "failure_summary": "guardrail exhausted after retries",
+  "execution_mode": "normal",
+  "fault_injection": null,
+  "dataset": {
+    "name": "telco_customer_churn",
+    "rows": 7043,
+    "columns": 21
+  },
+  "crew1": {
+    "completed": false,
+    "degraded_agents": [],
+    "artifacts": {}
+  },
+  "validation": {
+    "passed": false,
+    "errors": 0,
+    "warnings": 0,
+    "report_path": "artifacts/validation/validation_report.json"
+  },
+  "crew2": {
+    "started": false,
+    "reason": "Crew 1 reported a critical agent failure \u2014 the pipeline halted before Crew 2 could start"
+  },
+  "log_path": "logs/pipeline_20260915T122449Z-ff7101ea.log"
+}
