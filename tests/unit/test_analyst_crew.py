@@ -485,6 +485,28 @@ def test_contract_architect_prompt_covers_feature_curation(tmp_path: Path) -> No
         "customer_id" not in description,
     )
 
+    # --- Session 25 (final Phase 6 verification): the grounding rule ----
+    check(
+        "prompt: explicit rule that every column name must be grounded in the ACTUAL profile",
+        "character-for-character" in description and "profile_clean_dataset" in description,
+    )
+    check(
+        "prompt: explicitly forbids reconstructing/guessing a canonical or remembered column name",
+        "Never reconstruct, guess, or assume a column name" in raw,
+    )
+    check(
+        "prompt: explicit two-case identifier handling (present -> hard exclude; absent -> do not mention)",
+        "Case A" in description and "Case B" in description,
+    )
+    check(
+        "prompt: Case B explicitly forbids inventing/recreating a dropped identifier anywhere",
+        "do NOT invent or recreate" in raw,
+    )
+    check(
+        "prompt: primary_key given honest-not-unique guidance for Case B, not a forced fabrication",
+        "unique.value" in description and "fabricated identifier" in description,
+    )
+
 
 def test_eda_figure_resolution_is_naming_agnostic(tmp_path: Path) -> None:  # noqa: ARG001
     """Phase 6 quality close-out (Session 24): the deterministic EDA-figure

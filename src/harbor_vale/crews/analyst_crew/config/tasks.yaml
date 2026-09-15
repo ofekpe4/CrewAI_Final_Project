@@ -111,22 +111,46 @@ contract_architect_task:
     `scale_drift`: either the whole object is real and complete, or the
     field itself is `null`.
 
+    CRITICAL — grounding rule, applies to EVERY column name you write
+    anywhere in this draft (`columns`, `required_features`,
+    `excluded_features`, `primary_key`): a name is only real if it appears,
+    character-for-character, in THIS run's actual `profile_clean_dataset`
+    output. Never reconstruct, guess, or assume a column name from memory,
+    from a "canonical" snake_case convention, from the raw Telco source
+    column names, or from a prior example you have seen — different
+    Inspector-agent runs rename columns differently (or not at all), and
+    a name that existed in a different run may not exist in THIS one. If
+    you are not looking straight at a name in `profile_clean_dataset`'s
+    actual output, do not write it into the draft. This applies with
+    special force to the customer identifier column — see the two cases
+    below.
+
     CRITICAL — feature curation, not column dumping: every non-target
-    column in the cleaned dataset needs a semantic entry in `columns`
-    (coverage is still mandatory), but that is NOT the same question as
-    whether it belongs in `required_features`. Decide, for every column,
-    which of these four buckets it actually belongs in — do not default
-    to "just list every column as required":
+    column ACTUALLY PRESENT in the cleaned dataset needs a semantic entry
+    in `columns` (coverage is still mandatory for what exists — never for
+    a column you assume should exist), but that is NOT the same question
+    as whether it belongs in `required_features`. Decide, for every column
+    that is actually present, which of these four buckets it belongs in —
+    do not default to "just list every column as required":
       1. **the target** — declared once, in `target`, never in `columns`.
-      2. **an identifier** — a column whose job is to name/key a row (a
-         customer ID, a primary key), not to describe or predict anything.
-         It carries no generalizable modeling signal. This column MUST go
-         in `excluded_features` with `exclusion_type: "identifier"` and
-         `enforcement: "hard"`, with a real justification — and it MUST
-         NOT also appear in `required_features`. (Use whichever column
-         name this run's actual cleaned data gives the customer identifier
-         — read it from `profile_clean_dataset`; do not assume any
-         particular spelling or casing.)
+      2. **an identifier, CONDITIONAL on whether it is actually present**:
+         - **Case A — a customer-identifier-style column (a column whose
+           job is to name/key a row, not to describe or predict anything)
+           IS present in `profile_clean_dataset`**: use its EXACT real
+           name (whatever casing/spelling this run's Inspector agent
+           actually produced — do not alter it). This column MUST go in
+           `excluded_features` with `exclusion_type: "identifier"` and
+           `enforcement: "hard"`, with a real justification — and it MUST
+           NOT also appear in `required_features`.
+         - **Case B — no such column is present** (the Inspector agent
+           may have dropped it during cleaning — check
+           `profile_clean_dataset` to be sure): do NOT invent or recreate
+           it anywhere. It must not appear in `columns`,
+           `required_features`, `excluded_features`, or `primary_key`. An
+           identifier that was already removed from the modeling data
+           needs no further mention — declaring one that does not exist
+           is exactly the kind of invented fact this whole draft must
+           never contain.
       3. **a required modeling feature** — a column you are confident a
          model genuinely needs, based on the measured profile and the
          prior analyst's insights (e.g. a column the InsightsDoc showed
@@ -139,6 +163,18 @@ contract_architect_task:
          `required_features` OR `excluded_features` just because it
          exists. Leaving a column out of both lists is a normal, legitimate
          outcome, not an omission.
+
+    `primary_key` MUST reference at least one column that is actually
+    declared in `columns` (the schema requires a non-empty list). Case A
+    above (identifier present): use it as the primary key — it can
+    simultaneously be `excluded_features`-hard AND the `primary_key`; that
+    is the normal, expected shape, not a contradiction. Case B (no
+    identifier remains): do NOT invent one — instead pick whichever
+    ACTUAL present column(s) come closest to identifying a row, and be
+    honest in `unique.justification` if they do not truly guarantee
+    uniqueness (e.g. `unique.value: false` with a justification explaining
+    that no genuinely unique row identifier remains after cleaning). An
+    honest "not truly unique" beats a fabricated identifier every time.
 
     `excluded_features` — each entry needs an `exclusion_type` (identifier
     / target_leakage / redundancy_collinearity / modeling_simplicity /
