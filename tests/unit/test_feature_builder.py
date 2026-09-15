@@ -81,6 +81,62 @@ def test_valid_plan_builds_features() -> None:
     assert transformed.shape[0] == len(df)
 
 
+def test_numeric_column_with_real_nulls_is_imputed_not_crashed() -> None:
+    """Phase 7 live-run finding (Session 27): a real cleaned dataset can
+    legitimately still carry a null in a numeric column the Feature
+    Engineer chooses under an advisory override (e.g. `total_charges`) —
+    `StandardScaler` silently passes a NaN through, and no estimator this
+    project trains accepts one. `build_preprocessor` must impute (median)
+    inside the SAME leakage-safe `Pipeline`, never crash, and never leave
+    a NaN in the transformed output — for both a passthrough-numeric
+    column and a `transforms`-declared one."""
+    contract = _contract()
+    df = pd.read_csv(FIXTURE_CSV).copy()
+    df.loc[df.index[:3], "total_charges"] = float("nan")  # a genuine, measured null
+
+    plan = FeaturePlan(
+        contract_acknowledgment=_ack(contract),
+        use_features=list(contract.required_features) + ["total_charges"],
+        transforms=[TransformSpec(column="total_charges", kind="log1p")],
+        encoders=[EncoderSpec(column="contract_type", kind="onehot"), EncoderSpec(column="internet_service", kind="onehot")],
+        advisory_overrides=[AdvisoryOverride(column="total_charges", justification="legitimate redundant signal, not leakage")],
+    )
+    ok, validated = validate_feature_plan(plan, contract=contract)
+    assert ok, validated
+    result = build_features(df, contract, validated)
+    assert result.X["total_charges"].isnull().sum() == 3  # the raw feature column still carries the real nulls
+
+    import numpy as np
+
+    transformed = result.preprocessor.fit_transform(result.X)
+    dense = transformed.toarray() if hasattr(transformed, "toarray") else np.asarray(transformed)
+    assert not np.isnan(dense).any(), "no NaN may reach the fitted/transformed output an estimator will train on"
+
+
+def test_passthrough_numeric_column_with_real_nulls_is_imputed() -> None:
+    """Same guarantee as above, for a numeric feature with NO declared
+    transform/encoder — the default `StandardScaler` passthrough branch."""
+    contract = _contract()
+    df = pd.read_csv(FIXTURE_CSV).copy()
+    df.loc[df.index[:3], "total_charges"] = float("nan")
+
+    plan = FeaturePlan(
+        contract_acknowledgment=_ack(contract),
+        use_features=list(contract.required_features) + ["total_charges"],
+        encoders=[EncoderSpec(column="contract_type", kind="onehot"), EncoderSpec(column="internet_service", kind="onehot")],
+        advisory_overrides=[AdvisoryOverride(column="total_charges", justification="legitimate redundant signal, not leakage")],
+    )
+    ok, validated = validate_feature_plan(plan, contract=contract)
+    assert ok, validated
+    result = build_features(df, contract, validated)
+
+    import numpy as np
+
+    transformed = result.preprocessor.fit_transform(result.X)
+    dense = transformed.toarray() if hasattr(transformed, "toarray") else np.asarray(transformed)
+    assert not np.isnan(dense).any(), "no NaN may reach the fitted/transformed output an estimator will train on"
+
+
 # --- hard exclusions mechanically blocked --------------------------------------
 
 def test_hard_excluded_feature_is_rejected_by_the_guardrail() -> None:
