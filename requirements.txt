@@ -1,15 +1,21 @@
 # requirements.txt — exact environment lock
 # Generated from the project .venv via: python -m pip freeze
 # Python 3.12.14 (Homebrew, non-Conda) · generated 2026-09-08, updated 2026-09-14 (Phase 2),
-# updated 2026-09-14 (Phase 5)
+# updated 2026-09-14 (Phase 5), updated 2026-09-24 (Phase 9)
 # Direct runtime dependencies intentionally installed: crewai==1.15.20, pandas==3.0.5,
-# scikit-learn==1.9.1, matplotlib==3.11.2, joblib==1.6.0
+# scikit-learn==1.9.1, matplotlib==3.11.2, joblib==1.6.0, streamlit==1.64.0
 # (pandas added in Phase 2 for dataset characterization — PROJECT_PLAN.md §Phase 2 Gate 2C.
 # scikit-learn/matplotlib/joblib added in Phase 5 per PROJECT_PLAN.md §Phase 5 scope
 # (ml/train.py + ml/evaluate.py, sklearn.Pipeline/ColumnTransformer, deterministic EDA
 # figures, model.joblib serialization) — explicitly Plan-required, not incidental.
 # seaborn was NOT installed: not currently used by any Phase 5 code, matplotlib alone
-# is sufficient for the deterministic figures this phase actually renders.)
+# is sufficient for the deterministic figures this phase actually renders.
+# streamlit==1.64.0 added in Phase 9 for the UI application — pinned to a release whose
+# own pandas requirement (pandas<4,>=1.4.0) is compatible with the already-pinned
+# pandas==3.0.5; an initially-tried streamlit==1.50.0 required pandas<3 and was rejected
+# specifically to avoid silently downgrading the pinned pandas version. One transitive
+# dependency shift: websockets 17.1 -> 16.1.1, required by streamlit<17,>=12.0.0 — verified
+# harmless (pip check clean; full Phase 0-8 regression suite green before and after).)
 # Every other line is a transitive dependency of one of the above.
 
 aiofiles==24.1.0
@@ -17,6 +23,7 @@ aiohappyeyeballs==2.7.1
 aiohttp==3.14.3
 aiosignal==1.4.0
 aiosqlite==0.21.0
+altair==5.5.0
 annotated-doc==0.0.5
 annotated-types==0.8.0
 anyio==4.15.1
@@ -24,7 +31,9 @@ appdirs==1.4.4
 attrs==26.1.0
 backoff==2.2.1
 bcrypt==5.0.0
+blinker==1.9.0
 build==1.6.0
+cachetools==6.2.6
 cel-python==0.5.0
 certifi==2026.7.22
 cffi==2.1.1
@@ -33,9 +42,9 @@ chromadb==1.1.1
 click==8.5.0
 cloudpickle==3.1.2
 contourpy==1.4.0
-crewai==1.15.20
 crewai-cli==1.15.20
 crewai-core==1.15.20
+crewai==1.15.20
 cryptography==50.0.1
 cycler==0.12.1
 deprecation==2.1.0
@@ -48,6 +57,8 @@ flatbuffers==25.12.19
 fonttools==4.65.0
 frozenlist==1.8.0
 fsspec==2026.7.0
+gitdb==4.0.12
+GitPython==3.1.62
 google-re2==1.1.20251105
 googleapis-common-protos==1.75.3
 grpcio==1.83.1
@@ -55,25 +66,26 @@ h11==0.16.0
 hf-xet==1.6.0
 httpcore==1.0.9
 httptools==0.8.0
-httpx==0.28.1
 httpx-sse==0.4.3
+httpx==0.28.1
 huggingface_hub==1.30.0
 idna==3.19
 importlib_resources==7.1.0
 instructor==1.16.0
+itsdangerous==2.2.0
 Jinja2==3.1.6
 jiter==0.14.0
 jmespath==1.1.0
 joblib==1.6.0
-json5==0.10.0
 json_repair==0.60.1
+json5==0.10.0
 jsonref==1.1.0
-jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
+jsonschema==4.26.0
 kiwisolver==1.5.1
 kubernetes==36.0.3
-lance-namespace==0.12.0
 lance-namespace-urllib3-client==0.12.0
+lance-namespace==0.12.0
 lancedb==0.30.0
 lark==1.3.1
 linkify-it-py==2.2.0
@@ -114,9 +126,10 @@ protobuf==6.33.6
 pyarrow==25.0.1
 pybase64==1.5.0
 pycparser==3.0
-pydantic==2.12.5
-pydantic-settings==2.15.0
 pydantic_core==2.41.5
+pydantic-settings==2.15.0
+pydantic==2.12.5
+pydeck==0.9.3
 Pygments==2.21.0
 PyJWT==2.13.0
 pyparsing==3.3.2
@@ -126,30 +139,35 @@ pyproject_hooks==1.2.0
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.3
 python-multipart==0.0.32
+pytz==2026.4
 PyYAML==6.0.3
 referencing==0.37.0
 regex==2026.1.15
-requests==2.34.2
 requests-oauthlib==2.0.0
+requests==2.34.2
 rich==14.3.4
 rpds-py==2026.6.3
 scikit-learn==1.9.1
 scipy==1.18.1
 shellingham==1.5.4
 six==1.17.0
+smmap==5.0.3
 sniffio==1.3.1
 sse-starlette==3.4.11
 starlette==1.6.0
+streamlit==1.64.0
 tenacity==9.1.4
 textual==8.2.8
 threadpoolctl==3.6.0
 tokenizers==0.23.2
-tomli==2.0.2
+toml==0.10.2
 tomli_w==1.1.0
+tomli==2.0.2
+tornado==6.5.10
 tqdm==4.70.0
 typer==0.27.2
-typing-inspection==0.4.4
 typing_extensions==4.16.0
+typing-inspection==0.4.4
 tzdata==2026.3
 urllib3==2.7.0
 uv==0.11.33
@@ -157,5 +175,5 @@ uvicorn==0.52.4
 uvloop==0.22.1
 watchfiles==1.2.0
 websocket-client==1.9.2
-websockets==17.1
+websockets==16.1.1
 yarl==1.24.5

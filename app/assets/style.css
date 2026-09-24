@@ -1,0 +1,148 @@
+/* Harbor & Vale — Streamlit app styling (PROJECT_PLAN.md §M, Phase 9
+   Internal Gate 9.11). Deliberately restrained: focused CSS for the things
+   the Plan's visual priorities actually rank — pipeline state, PASS/FAIL,
+   the contract boundary, validation findings, model results — echoing the
+   same palette `src/harbor_vale/templates/styles.css` (eda_report.html)
+   already established, not a competing design system. */
+
+:root {
+  --hv-text-strong: #1a202c;
+  --hv-text-muted: #718096;
+  --hv-border: #e2e8f0;
+  --hv-radius: 8px;
+}
+
+.hv-card {
+  background: #ffffff;
+  border: 1px solid var(--hv-border);
+  border-radius: var(--hv-radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+/* --- Status banners — PASS / FAIL / DEMO MODE / DEGRADED / NO RUN --------
+   Fixed, high-contrast colors on purpose: these are alert-style boxes, not
+   theme-following surfaces, so PASS/FAIL/DEMO/DEGRADED read the same way
+   for every viewer regardless of light/dark mode. Each state uses its own
+   hue family so DEGRADED can never be mistaken for FAIL. */
+
+.hv-banner {
+  border-radius: var(--hv-radius);
+  padding: 1rem 1.25rem;
+  margin: 0.5rem 0 1.25rem 0;
+  border-width: 2px;
+  border-style: solid;
+}
+
+.hv-banner-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.15rem;
+}
+
+.hv-banner-message {
+  font-size: 0.92rem;
+  opacity: 0.92;
+}
+
+.hv-banner-pass {
+  background: #f0fff4;
+  border-color: #38a169;
+  color: #22543d;
+}
+
+.hv-banner-fail {
+  background: #fff5f5;
+  border-color: #e53e3e;
+  color: #742a2a;
+}
+
+.hv-banner-demo {
+  background: #faf5ff;
+  border-color: #805ad5;
+  color: #44337a;
+}
+
+.hv-banner-degraded {
+  background: #fffaf0;
+  border-color: #dd6b20;
+  color: #7b341e;
+}
+
+.hv-banner-none {
+  background: #f7fafc;
+  border-color: #a0aec0;
+  color: var(--hv-text-strong);
+}
+
+/* --- Dataset Contract: observed vs. constraints — Internal Gate 9.6 ------
+   Two visually distinct column treatments so "what Python measured" is
+   never confused with "what the system enforces". */
+
+.hv-observed {
+  background: #ebf8ff;
+  border: 1px solid #90cdf4;
+  border-radius: var(--hv-radius);
+  padding: 0.85rem 1rem;
+}
+
+.hv-observed .hv-col-label {
+  color: #2b6cb0;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4rem;
+}
+
+.hv-constraints {
+  background: #fffff0;
+  border: 1px solid #f6e05e;
+  border-radius: var(--hv-radius);
+  padding: 0.85rem 1rem;
+}
+
+.hv-constraints .hv-col-label {
+  color: #975a16;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.4rem;
+}
+
+.hv-justification {
+  font-size: 0.85rem;
+  color: var(--hv-text-muted);
+  font-style: italic;
+  margin-top: 0.3rem;
+}
+
+/* --- Severity badges (Validation Gate page) ------------------------------ */
+
+.hv-sev-ERROR {
+  color: #e53e3e;
+  font-weight: 700;
+}
+
+.hv-sev-WARN {
+  color: #dd6b20;
+  font-weight: 700;
+}
+
+.hv-sev-INFO {
+  color: #2b6cb0;
+  font-weight: 700;
+}
+
+/* --- Small helpers -------------------------------------------------------- */
+
+.hv-muted {
+  color: var(--hv-text-muted);
+  font-size: 0.85rem;
+}
+
+.hv-mono {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.85rem;
+}
