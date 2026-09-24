@@ -5,7 +5,7 @@ Two CrewAI crews separated by a **machine-enforced dataset contract** and a
 *seam*: a contract that one crew writes and the other must honour, and a Flow that
 checks it before anything downstream is allowed to run.
 
-> **Status: Phases 0–8 complete — both crews + the Flow implemented.**
+> **Status: Phases 0–9 complete — both crews, the Flow, and the Streamlit app implemented.**
 > The environment and core infrastructure exist and are tested (Phase 0). The
 > CrewAI execution-pattern spike is resolved (Phase 1): **Pattern A** — one
 > `Crew` of 3 sequential `Task`s per crew, each with `output_pydantic` +
@@ -63,8 +63,10 @@ checks it before anything downstream is allowed to run.
 > scale_change` (`make demo-fail`) mutates a run-scoped copy of the Crew 1
 > handoff only (never the committed artifacts) and is proven, offline, to
 > block Crew 2 with a `SUSPECTED SCALE CHANGE` finding.
-> **The Streamlit app is *not* implemented yet** (Phase 9).
-> See [Project status](#project-status) below.
+> **The Streamlit app (Phase 9) is now implemented** — a six-page UI that
+> presents these artifacts and can invoke the pipeline itself; see
+> [Running the app](#running-the-app) and "Done — Phase 9" under
+> [Project status](#project-status) below.
 
 ---
 
@@ -119,7 +121,7 @@ pipeline itself is built yet — it is the target described in `PROJECT_PLAN.md`
 | **Python** | **3.12.x**, CPython, **not** from Anaconda/Conda. The project is developed on Homebrew Python `3.12.14`; any non-Conda 3.12 works. CrewAI `1.15.20` supports `>=3.10,<3.14`; 3.12 was chosen to reduce install risk. |
 | **OS** | Developed on macOS (Apple Silicon). Linux should work; not yet tested. |
 | **Anaconda / Conda** | **Not used and not required.** Do not install this project's dependencies into a Conda `base` or global environment, even if your shell shows `(base)`. |
-| **LLM API key** | **Not needed for Phase 0–5 or for any mocked/offline test.** A real `OPENAI_API_KEY` is needed only to run Crew 1 live (`scripts/run_crew1.py`); see [Configuration](#configuration). |
+| **LLM API key** | **Not needed for Phase 0–5, for any mocked/offline test, or to view results in the Streamlit app.** A real `OPENAI_API_KEY` is needed only to run a Crew live (`scripts/run_crew1.py`, a normal pipeline run); see [Configuration](#configuration). |
 
 ---
 
@@ -149,11 +151,13 @@ If `python3.12` is not on your `PATH`, install a non-Conda build first — e.g.
 `brew install python@3.12` (macOS) or from <https://www.python.org/downloads/> —
 then use its `python3.12` for step 1. Never use a Conda interpreter.
 
-`requirements.txt` is a full, exact lock (`pip freeze` output) of the environment
-that Phase 0 was verified against: `crewai==1.15.20` plus its transitive
-dependencies, 134 pinned distributions. It will be regenerated when later phases
-add project dependencies (pandas, scikit-learn, matplotlib/seaborn, Streamlit,
-and dev tooling).
+`requirements.txt` is a full, exact lock (`pip freeze` output), regenerated as
+later phases added project dependencies: `crewai==1.15.20` (Phase 0),
+`pandas==3.0.5` (Phase 2), `scikit-learn==1.9.1`/`matplotlib==3.11.2`/
+`joblib==1.6.0` (Phase 5), and `streamlit==1.64.0` (Phase 9) — 159 pinned
+distributions as of Phase 9. Pinned to a Streamlit release whose own pandas
+requirement (`pandas<4,>=1.4.0`) stays compatible with the already-pinned
+`pandas==3.0.5` — see the file's own header comment for the version history.
 
 ### Verify the install
 
@@ -212,13 +216,32 @@ python scripts/run_pipeline.py --inject-failure scale_change
 ```
 
 Every run writes `artifacts/run_summary.json` (status, failure category, Crew
-1/2 state, validation state, best model/metric — the application's future
-source of truth) and `artifacts/run_metadata.json` (real package versions,
-seeds, LLM model, prompt-config hash, dataset SHA256, git commit) plus a
-per-run log at `logs/pipeline_<run_id>.log`. **On any failure, `crew2.started`
-is explicitly `false` in `run_summary.json`, with a clear reason** — the
-deterministic gate is the sole blocking PASS/FAIL authority, and Crew 2 is
-structurally unreachable on a FAIL (`tests/unit/test_pipeline_flow.py`).
+1/2 state, validation state, best model/metric — **the Streamlit app's
+source of truth**, §Q.3) and `artifacts/run_metadata.json` (real package
+versions, seeds, LLM model, prompt-config hash, dataset SHA256, git commit)
+plus a per-run log at `logs/pipeline_<run_id>.log`. **On any failure,
+`crew2.started` is explicitly `false` in `run_summary.json`, with a clear
+reason** — the deterministic gate is the sole blocking PASS/FAIL authority,
+and Crew 2 is structurally unreachable on a FAIL (`tests/unit/test_pipeline_flow.py`).
+
+---
+
+## Running the app
+
+```bash
+source .venv/bin/activate
+streamlit run app/streamlit_app.py
+```
+
+Opens a six-page Streamlit app: **1 Pipeline Run** (operator view + a
+controlled "Run pipeline" button), **2 Crew 1 Analysis** (cleaned data
+preview, EDA report, business insights), **3 Dataset Contract** (observed vs.
+enforced constraints, visually separated), **4 Validation Gate** (PASS/FAIL +
+findings), **5 Crew 2 Modeling** (model comparison, winner, Model Card), and
+**6 Logs** (the current run's log file). See "Done — Phase 9" below for the
+full architecture and what each page reads. The app works before any
+pipeline has run — every page shows a clear "no run yet" state instead of
+crashing, and viewing existing results never requires `OPENAI_API_KEY`.
 
 ---
 
@@ -253,7 +276,17 @@ CrewAI_Final_Project/
 │   └── flow/                    # state.py · pipeline_flow.py · replay.py ·
 │                                 # run_summary.py · run_metadata.py    [implemented — Phase 8]
 │
-├── app/                        # Streamlit UI                          (placeholder — Phase 9)
+├── app/                        # Streamlit UI                          [implemented — Phase 9]
+│   ├── streamlit_app.py         # home page — status banners, run metadata, nav
+│   ├── pages/1_Pipeline_Run.py  # operator view + controlled "Run pipeline" button
+│   ├── pages/2_Crew1_Analysis.py    # clean_data preview, eda_report.html, insights.md
+│   ├── pages/3_Dataset_Contract.py  # observed vs. constraints, visually separated
+│   ├── pages/4_Validation_Gate.py   # PASS/FAIL + findings from validation_report.json
+│   ├── pages/5_Crew2_Modeling.py    # model comparison from experiments.json, Model Card
+│   ├── pages/6_Logs.py              # current run's log, level filter
+│   ├── lib/ui_helpers.py        # safe artifact loading + status/banner rendering — no business logic
+│   ├── lib/pipeline_runner.py   # closed-vocabulary subprocess wiring to scripts/run_pipeline.py
+│   └── assets/style.css         # focused CSS — PASS/FAIL/DEMO/DEGRADED banners, contract boxes
 ├── data/raw/                   # downloaded datasets, git-ignored      [implemented — Phase 2]
 ├── artifacts/{crew1,validation,crew2}/                                 [implemented — run outputs]
 ├── artifacts/{run_summary.json,run_metadata.json}                      [implemented — Phase 8]
@@ -312,6 +345,11 @@ python tests/unit/test_analyst_crew.py                                          
 python tests/unit/test_scientist_crew.py                                         # Phase 7 — Crew 2, scripted LLM, zero API key ⭐
 python tests/integration/test_crew2_tool_surface.py                              # Phase 7 — handoff boundary security ⭐
 python tests/unit/test_pipeline_flow.py                                          # Phase 8 — the Flow, mocked crews, zero API key ⭐
+python tests/smoke/test_app_imports.py                                           # Phase 9 — app + 6 pages import, zero API key
+python tests/smoke/test_app_handles_missing_artifacts.py                         # Phase 9 — empty artifacts dir, no crash ⭐
+python tests/smoke/test_app_renders_failure_state.py                             # Phase 9 — FAIL banner + Crew 2 NOT STARTED ⭐
+python tests/smoke/test_app_additional_states.py                                 # Phase 9 — PASS/DEMO/DEGRADED, observed/constraints, winner-from-experiments.json
+python tests/smoke/test_pipeline_run_integration.py                              # Phase 9 — Run button -> fixed argv, Popen mocked ⭐
 ```
 
 Each prints `PASS`/`FAIL` per check and exits non-zero on any failure. Once
@@ -621,15 +659,80 @@ into a single pipeline with a real `@start`/`@listen`/`@router`/`or_` graph.
       `make replay` against that same live run's stored plans reproduced
       the **identical** `roc_auc=0.8477950864140121` with zero LLM calls.
 
+### Done — Phase 9: the Streamlit application ⭐
+
+A six-page Streamlit app (`app/`) that **presents and invokes** the
+already-existing pipeline — it never reimplements validation, contract
+checking, feature engineering, model training, winner selection, or fault
+injection. Every fact shown is read from an artifact `src/harbor_vale/*`
+already wrote.
+
+- [x] **`app/streamlit_app.py`** — title, problem description, overall
+      status banner, run id, latest run metadata, navigation guidance.
+      Status is derived strictly from `run_summary.json`'s own fields
+      (`status`, `fault_injection`, `degraded_agents`), never guessed from
+      file presence.
+- [x] **Four status banners — PASS / FAIL / DEMO MODE / DEGRADED** —
+      visually distinct fixed-color boxes (`app/assets/style.css`) that may
+      coexist (a completed run can still be a demo run with a degraded
+      narrative agent).
+- [x] **Page 1 — Pipeline Run**: operator view (stage-by-stage Crew
+      1/Gate/Crew 2 status) plus a controlled "Run pipeline" button.
+      **`lib/pipeline_runner.py`** maps a closed set of UI choices
+      (`normal`/`validate_only`/`replay_plans` + an explicit, off-by-default
+      fault-injection checkbox) onto the exact same
+      `scripts/run_pipeline.py` argv a human would type, as a fixed-argv
+      `subprocess.Popen(..., shell=False)` — never `os.system`, never a
+      shell string, never an arbitrary command. Progress streams into
+      `st.status()` live, one real stdout line at a time.
+- [x] **Page 2 — Crew 1 Analysis**: `clean_data.csv` preview, the existing
+      `eda_report.html` embedded via `st.iframe`, `insights.md` as Markdown,
+      figures gallery, DEGRADED banner if a narrative fallback fired.
+- [x] **Page 3 — Dataset Contract**: the project's central visual —
+      **OBSERVED** (blue, "what Python measured") and **CONSTRAINTS**
+      (yellow, "what the system enforces, with justification") rendered as
+      two distinct boxes, never flattened into one JSON blob. Per-column
+      selector, required/excluded features, primary key, integrity SHA256,
+      assumptions, validation policy, plus a raw-JSON expander as a
+      secondary view.
+- [x] **Page 4 — Validation Gate**: PASS/FAIL, error/warning counts, the
+      full findings table with severity/check_id/family/justification —
+      `scale_drift` findings surfaced first and prominently. Reads
+      `validation_report.json` only; recomputes nothing.
+- [x] **Page 5 — Crew 2 Modeling**: feature preview, a model-comparison
+      table + bar chart, confusion matrix — **every number read from
+      `experiments.json`**, never parsed from agent prose. The winner shown
+      always matches the Python-selected `experiments.json` winner.
+      `evaluation_report.md`/`model_card.md` shown as-is for narrative
+      context.
+- [x] **Page 6 — Logs**: the current run's log (`run_summary.json`'s own
+      `log_path`, never guessed), with an INFO/WARNING/ERROR/CRITICAL
+      filter. Never exposes `.env` or secrets — only this project's own
+      `logs/pipeline_<run_id>.log` is ever read.
+- [x] **Missing/corrupt artifact safety** — every page survives an empty
+      `artifacts/` tree (the app works before the first pipeline run) and a
+      malformed JSON file with a visible error, never a crash and never a
+      silently-fabricated PASS.
+- [x] **65/65 smoke checks, zero LLM calls, zero API key**
+      (`tests/smoke/*.py`, using `streamlit.testing.v1.AppTest`) — imports,
+      missing-artifact survival, the synthetic FAIL state (Crew 2 shown as
+      NOT STARTED, not "missing"), PASS/DEMO/DEGRADED derivation,
+      observed/constraints separation, winner-from-`experiments.json`,
+      malformed-JSON safety, and the Run button's subprocess wiring
+      (`Popen` mocked — fixed argv, `shell=False`, no accidental fault flag,
+      page load alone never spawns a process).
+- [x] A real, local `streamlit run app/streamlit_app.py` started headless,
+      answered `HTTP 200` on `/` and `/healthz`, and stopped cleanly.
+
 ### Not started
 
 Everything else. Specifically **not implemented and not working yet**:
 
-- **Streamlit** app (Phase 9).
 - The full polished failure-demo suite/screenshots (Phase 10) — the core
   `scale_change` fault route itself is already wired and proven
   (`make demo-fail`, `tests/unit/test_pipeline_flow.py`); Phase 10 owns the
   complete failure catalog and demo polish.
+- Final documentation/deployment polish (Phase 11).
 
 ---
 
