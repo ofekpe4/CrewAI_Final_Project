@@ -226,6 +226,75 @@ and Crew 2 is structurally unreachable on a FAIL (`tests/unit/test_pipeline_flow
 
 ---
 
+## Failure Demonstration
+
+**The problem this project simulates:** a prior incident at the fictional
+"Harbor & Vale" ("the company") shipped a dataset where one monetary
+column had silently shifted scale by roughly 100× relative to what was
+agreed upstream. It passed every ordinary technical check — the file
+loaded, the dtype was correct, there were no nulls — because a scale
+change simply isn't a schema problem. It cost five weeks of modeling
+effort before anyone caught it. This project's deterministic Validation
+Gate exists specifically to catch that class of failure, mechanically,
+before the Data Scientist Crew is ever allowed to start.
+
+```bash
+make run                                              # the successful path
+make demo-fail                                        # reproduce the incident — the gate blocks Crew 2
+python scripts/run_pipeline.py --validate-only         # the second mechanism — validate an existing/edited handoff
+```
+
+**Why `scale_change` specifically matters:** it is the one scenario
+PROJECT_PLAN.md §O.3 marks mandatory, because it is the one a naive
+"does it load, are the types right, are there nulls" check cannot catch by
+construction. The gate's `scale_drift` check compares the candidate's
+median against the contract's own recorded snapshot and reports
+**`SUSPECTED SCALE CHANGE ≈100×`** when the ratio matches that signature —
+together with an independent `integrity` (sha256) mismatch, since the
+bytes genuinely changed.
+
+**What should appear on a `make demo-fail` run:**
+- A `CRITICAL FAULT INJECTION ACTIVE` log line.
+- The gate: **FAILED**, with a `SUSPECTED SCALE CHANGE` finding and an
+  integrity mismatch.
+- `crew2_started: false` in `run_summary.json`, with a clear reason —
+  **the Data Scientist Crew was not started**, mechanically guaranteed:
+  `run_scientist_crew` is wired with `@listen("gate_passed")`, a route
+  label only the deterministic gate's own router can emit.
+
+We are precise about what the gate actually detects: it reports an
+**unexplained ~100× scale change**, never a specific claim like "cents
+became dollars." The real Telco dataset's `MonthlyCharges` unit is
+genuinely undocumented (`unit: "currency_unspecified"` in the contract) —
+the simulated Harbor & Vale incident motivates *why* this check exists;
+the gate's actual finding stays within what it can honestly support.
+
+**Full script, scenario catalog, and defense argument:**
+`docs/failure_demo.md`. **Automated proof, zero LLM calls:**
+`tests/failure/` (see "Running the tests" below) — every blocking scenario
+asserts `passed is False`, the expected check family, `crew2_started is
+False`, and a real `0` call count against a mocked Crew 2; the one
+WARN-only scenario (`contract_only_change`) asserts the opposite —
+continuation. **Screenshot evidence:** see the checklist below.
+
+### Screenshot evidence checklist
+
+Five captures, taken manually from a real `streamlit run
+app/streamlit_app.py` session (this project does not add browser
+automation solely for screenshots):
+
+1. A successful run — the home page's PASS banner + Crew 1/Gate/Crew 2
+   status (Page 1).
+2. The Dataset Contract page's OBSERVED vs. CONSTRAINTS boxes (Page 3).
+3. A `make demo-fail` run — the 🎭 DEMO MODE + FAIL banners (home page /
+   Page 1).
+4. The Validation Gate page showing the `SUSPECTED SCALE CHANGE` finding
+   (Page 4).
+5. Page 1's operator view showing Crew 2 as **NOT STARTED** with its
+   reason, after the failed run.
+
+---
+
 ## Running the app
 
 ```bash
@@ -300,8 +369,10 @@ CrewAI_Final_Project/
 ├── docs/contract_spec.md        # Dataset Contract specification                  [Phase 3]
 ├── docs/validation_calibration.md # scale/drift tolerance calibration evidence   [Phase 4]
 ├── docs/flow_diagram.{html,css,js}  # the real flow.plot() output               [Phase 8]
+├── docs/failure_demo.md         # 90-second presenter script + scenario catalog  [Phase 10]
 ├── tests/{unit,integration,failure,smoke,fixtures}/
-│   └── unit/  — Phase 0–8 unit tests (see "Running the tests" above)  [implemented]
+│   ├── unit/ · integration/ · smoke/ — Phase 0–9 tests (see "Running the tests" above)  [implemented]
+│   └── failure/  — 10 fault scenarios + default-run isolation + validate-only, zero LLM calls  [implemented — Phase 10]
 └── working flow/               # per-session development log
 ```
 
@@ -350,6 +421,18 @@ python tests/smoke/test_app_handles_missing_artifacts.py                        
 python tests/smoke/test_app_renders_failure_state.py                             # Phase 9 — FAIL banner + Crew 2 NOT STARTED ⭐
 python tests/smoke/test_app_additional_states.py                                 # Phase 9 — PASS/DEMO/DEGRADED, observed/constraints, winner-from-experiments.json
 python tests/smoke/test_pipeline_run_integration.py                              # Phase 9 — Run button -> fixed argv, Popen mocked ⭐
+python tests/failure/test_scale_change.py                                        # Phase 10 — mandatory scenario ⭐⭐
+python tests/failure/test_rename_column.py                                       # Phase 10 — schema
+python tests/failure/test_drop_required_column.py                                # Phase 10 — schema
+python tests/failure/test_change_dtype.py                                        # Phase 10 — schema
+python tests/failure/test_inject_nulls.py                                        # Phase 10 — constraints
+python tests/failure/test_unknown_category.py                                    # Phase 10 — constraints (declared-domain-only)
+python tests/failure/test_flip_target_encoding.py                                # Phase 10 — target drift
+python tests/failure/test_truncate_dataset.py                                    # Phase 10 — modeling
+python tests/failure/test_corrupt_contract_json.py                               # Phase 10 — artifacts / prerequisite gating
+python tests/failure/test_contract_only_change.py                                # Phase 10 — WARN-only, Crew 2 continues ⭐
+python tests/failure/test_default_run_isolation.py                               # Phase 10 — no-fault default run stays clean ⭐
+python tests/failure/test_validate_only_demo.py                                  # Phase 10 — validate-only detects upstream edits
 ```
 
 Each prints `PASS`/`FAIL` per check and exits non-zero on any failure. Once
@@ -724,14 +807,65 @@ already wrote.
 - [x] A real, local `streamlit run app/streamlit_app.py` started headless,
       answered `HTTP 200` on `/` and `/healthz`, and stopped cleanly.
 
+### Done — Phase 10: the failure demonstration ⭐
+
+Proves, end to end and mechanically, that the deterministic Validation
+Gate catches semantic and structural failures **before** Crew 2 is ever
+allowed to run — the project's core claim. See "Failure Demonstration"
+above and `docs/failure_demo.md` for the full presentation script.
+
+- [x] **The mandatory `scale_change` scenario**, proven through the REAL
+      Flow's own injection point (`HarborValeFlow(fault_injection=
+      "scale_change")`) — `MonthlyCharges ×100`, dtype unchanged,
+      mutation strictly after Crew 1 and strictly before the gate. The
+      gate's finding contains the literal phrase `SUSPECTED SCALE CHANGE`
+      with an `≈100×` ratio, plus a separate `INTEGRITY_SHA256_MATCH`
+      error; `crew2_started is False`; the real Crew 2 mock's call count
+      is `0`; `run_summary.json` carries `status=halted_validation`,
+      `failure_category=contract_validation`, `fault_injection=
+      scale_change` (`tests/failure/test_scale_change.py`).
+- [x] **Nine more representative scenarios** (`rename_column`,
+      `drop_required_column`, `change_dtype`, `inject_nulls`,
+      `unknown_category` — both the declared- and undeclared-domain
+      cases, `flip_target_encoding`, `truncate_dataset`,
+      `corrupt_contract_json`) — every one proves `passed is False`, the
+      expected check family, `crew2_started is False`, and a real `0`
+      Crew 2 call count, through the same real, unmocked gate.
+- [x] **The one WARN-only scenario, `contract_only_change`** — proves the
+      gate does **not** block every contract edit: a
+      `SCHEMA_UNKNOWN_COLUMN` WARNING, 0 errors, and Crew 2 genuinely
+      starts and completes (`tests/failure/test_contract_only_change.py`).
+- [x] **Default-run isolation** (`tests/failure/
+      test_default_run_isolation.py`) — `HarborValeFlow()` defaults to
+      `fault_injection is None`; the CLI flag has no env-var fallback; a
+      fault-injected run leaves the real committed `artifacts/crew1/*`
+      byte-identical (sha256-compared) before and after; a normal run
+      emits zero `CRITICAL FAULT INJECTION` log lines. No `--restore` step
+      exists anywhere — mutation lands only on a run-scoped snapshot copy.
+- [x] **`--validate-only`'s second legitimate demo mechanism**
+      (`tests/failure/test_validate_only_demo.py`) — both crews skipped,
+      the candidate files never overwritten, the gate still reports a
+      deliberately-introduced upstream edit.
+- [x] **18/18 offline failure-demonstration checks across 12 files, zero
+      LLM calls, zero `OPENAI_API_KEY`** — every scenario uses the real,
+      unmocked `contract.validator.run_validation_gate` and the real
+      `HarborValeFlow`, with only Crew 1/Crew 2 mocked (exactly
+      `tests/unit/test_pipeline_flow.py`'s own proven pattern).
+      `python scripts/run_pipeline.py --replay-plans --inject-failure
+      scale_change` additionally proves the identical fault-injection ->
+      gate -> block path through the real CLI, still with zero LLM calls.
+- [x] **Streamlit failure display** (Phase 9's existing `app/`, unchanged)
+      verified against these artifacts: FAIL banner, 🎭 DEMO MODE banner,
+      the failure reason, Crew 2 shown as **NOT STARTED** with its real
+      reason (never conflated with "missing"), and `scale_drift` findings
+      surfaced first and prominently on the Validation Gate page.
+- [x] `docs/failure_demo.md` — the full 90-second presenter script,
+      commands, expected PASS/FAIL output, and the defense argument (§P.3).
+
 ### Not started
 
 Everything else. Specifically **not implemented and not working yet**:
 
-- The full polished failure-demo suite/screenshots (Phase 10) — the core
-  `scale_change` fault route itself is already wired and proven
-  (`make demo-fail`, `tests/unit/test_pipeline_flow.py`); Phase 10 owns the
-  complete failure catalog and demo polish.
 - Final documentation/deployment polish (Phase 11).
 
 ---
