@@ -111,6 +111,36 @@ contract_architect_task:
     `scale_drift`: either the whole object is real and complete, or the
     field itself is `null`.
 
+    CRITICAL — output format: your final answer must be ONE valid JSON
+    object and NOTHING else — no ```json code fences, no markdown, no
+    comments, no prose before or after the JSON, no trailing commas, no
+    Python literals (`True`/`False`/`None` are not JSON — use `true`/
+    `false`/`null`), no unquoted property names. Your raw output is parsed
+    directly as JSON; a single stray comma or code fence makes the entire
+    draft unparseable and burns one of your limited retries on a problem
+    that has nothing to do with your actual judgement. Before you answer,
+    mentally re-read your own output exactly as a strict JSON parser would
+    and confirm it parses.
+
+    CRITICAL — closed_domain value typing: every value in
+    `columns[*].closed_domain.values` (and in `target.closed_domain.values`)
+    MUST be a JSON string, with NO exception — even when the real
+    categories are numeric-looking (e.g. a 0/1-coded flag) or
+    boolean-looking. Serialize the LITERAL category `profile_clean_dataset`
+    reports, as a string, never as a JSON number or boolean:
+      WRONG: "values": [0, 1]
+      WRONG: "values": [true, false]
+      RIGHT: "values": ["0", "1"]
+    and where the real categories are already textual, keep them exactly
+    as reported, character for character:
+      RIGHT: "values": ["Yes", "No"]
+    Do NOT invent a normalized label and do NOT convert a value into a
+    different representation because it "looks equivalent" (e.g. turning
+    a 0/1-coded flag into `true`/`false`) — the category's actual value
+    from the profile, quoted as a string, is the only correct
+    serialization. This rule applies uniformly to every column's
+    `closed_domain`, not only to columns that look obviously categorical.
+
     CRITICAL — grounding rule, applies to EVERY column name you write
     anywhere in this draft (`columns`, `required_features`,
     `excluded_features`, `primary_key`). Follow this exact three-step
@@ -220,6 +250,10 @@ contract_architect_task:
     min/max/median/row_count/hash — those are measured by Python from the
     real file, after your semantic draft is accepted.
   expected_output: >
-    A ContractDraft: a JSON object with `target`, `required_features`,
-    `excluded_features`, `primary_key`, `columns` (one entry per non-target
-    column in the cleaned dataset), and `assumptions`.
+    A ContractDraft: ONE valid JSON object — no markdown fences, no
+    trailing commas, no prose before or after it — with `target`,
+    `required_features`, `excluded_features`, `primary_key`, `columns`
+    (one entry per non-target column in the cleaned dataset), and
+    `assumptions`. Every `closed_domain.values` entry, at every level, is a
+    JSON string — never a number, never a boolean — even for a
+    numeric-looking or boolean-looking category.

@@ -489,6 +489,58 @@ def test_contract_architect_prompt_covers_feature_curation(tmp_path: Path) -> No
         and ("customer_id" not in description or "invent `customer_id`" in description),
     )
 
+
+def test_contract_architect_prompt_covers_strict_json_and_closed_domain_typing(tmp_path: Path) -> None:  # noqa: ARG001
+    """Phase 10 live-run close-out: protects the PROMPT CONTRACT text added
+    after a real `make demo-fail` run exhausted its guardrail retries —
+    `columns.2.closed_domain.values.0`/`.1` ("Input should be a valid
+    string", `SeniorCitizen` serialized as `[0, 1]` instead of `["0",
+    "1"]`), plus earlier retry attempts that produced non-strict JSON. The
+    schema itself was NOT changed (`ClosedDomainConstraint.values:
+    list[str]` already required strings before and after); this only
+    asserts the task text now says so explicitly, with the exact
+    right/wrong examples a live run relies on."""
+    from harbor_vale.crews.analyst_crew.analyst_crew import _TASKS_YAML, _load_yaml
+
+    raw = _load_yaml(_TASKS_YAML)["contract_architect_task"]["description"]
+    description = " ".join(raw.split())
+    expected_output = " ".join(
+        _load_yaml(_TASKS_YAML)["contract_architect_task"]["expected_output"].split()
+    )
+
+    check(
+        "prompt: strict-JSON output rule present (no fences/comments/prose/trailing commas)",
+        "code fences" in description.lower()
+        and "no markdown" in description.lower()
+        and "trailing commas" in description.lower()
+        and "no prose before or after" in description.lower(),
+    )
+    check(
+        "prompt: Python-literal vs. JSON-literal distinction spelled out",
+        "python literals" in description.lower() and "are not json" in description.lower(),
+    )
+    check(
+        "prompt: closed_domain values must be JSON strings, with a concrete numeric WRONG/RIGHT example",
+        '"values": [0, 1]' in description and '"values": ["0", "1"]' in description,
+    )
+    check(
+        "prompt: closed_domain values rule also bans a boolean serialization",
+        '"values": [true, false]' in description,
+    )
+    check(
+        "prompt: the typing rule is explicitly NOT limited to obviously-categorical columns",
+        "not only to columns that look obviously categorical" in description,
+    )
+    check(
+        "prompt: forbids inventing a normalized label or converting a value because it 'looks equivalent'",
+        "do not invent a normalized label" in description.lower(),
+    )
+    check(
+        "expected_output: reiterates strict JSON + string-typed closed_domain values",
+        "no markdown fences" in expected_output.lower()
+        and "never a number, never a boolean" in expected_output.lower(),
+    )
+
     # --- Session 25 (final Phase 6 verification): the grounding rule ----
     check(
         "prompt: explicit rule that every column name must be grounded in the ACTUAL profile",
@@ -569,6 +621,7 @@ ALL_TESTS = [
     test_critical_agent_failure_contract_architect_halts,
     test_narrative_fallback_is_visible,
     test_contract_architect_prompt_covers_feature_curation,
+    test_contract_architect_prompt_covers_strict_json_and_closed_domain_typing,
     test_eda_figure_resolution_is_naming_agnostic,
 ]
 

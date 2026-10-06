@@ -282,6 +282,56 @@ def test_contract_draft_rejects_unsupported_input_type_without_raising() -> None
     assert "unsupported guardrail input type" in msg
 
 
+def test_contract_draft_rejects_numeric_closed_domain_values() -> None:
+    """Phase 10 live-run close-out: reproduces the EXACT shape a real
+    `make demo-fail` run's Contract Architect produced after exhausting
+    its guardrail retries — `senior_citizen.closed_domain.values` as
+    `[0, 1]` (JSON numbers) instead of `["0", "1"]` (JSON strings). The
+    live Pydantic error was `columns.2.closed_domain.values.0`/`.1`:
+    "Input should be a valid string". `ClosedDomainConstraint.values:
+    list[str]` already required strings before this session — this test
+    proves the schema's own (unchanged) behavior, not a new rule."""
+    draft_dict = build_draft().model_dump(mode="json")
+    target_column = next(c for c in draft_dict["columns"] if c["name"] == "senior_citizen")
+    assert target_column["closed_domain"]["values"] == ["0", "1"]  # the schema-valid baseline
+
+    draft_dict["columns"] = [
+        {**c, "closed_domain": {**c["closed_domain"], "values": [0, 1]}} if c["name"] == "senior_citizen" else c
+        for c in draft_dict["columns"]
+    ]
+    ok, msg = validate_contract_draft(draft_dict)
+    assert ok is False
+    assert "senior_citizen" not in msg or "valid string" in msg  # the real error names the path, not the column
+    assert "valid string" in msg.lower() or "string_type" in msg.lower()
+
+
+def test_contract_draft_rejects_boolean_closed_domain_values() -> None:
+    """The second live-observed invalid shape — `[true, false]` instead of
+    string-typed values — must be rejected the same way."""
+    draft_dict = build_draft().model_dump(mode="json")
+    draft_dict["columns"] = [
+        {**c, "closed_domain": {**c["closed_domain"], "values": [True, False]}} if c["name"] == "senior_citizen" else c
+        for c in draft_dict["columns"]
+    ]
+    ok, msg = validate_contract_draft(draft_dict)
+    assert ok is False
+
+
+def test_contract_draft_accepts_the_schema_valid_string_representation() -> None:
+    """The fix: the exact same binary flag, correctly serialized as
+    `["0", "1"]`, must pass — proving the correction is representational
+    only, never a semantic change to what the column actually means."""
+    draft_dict = build_draft().model_dump(mode="json")
+    draft_dict["columns"] = [
+        {**c, "closed_domain": {**c["closed_domain"], "values": ["0", "1"]}} if c["name"] == "senior_citizen" else c
+        for c in draft_dict["columns"]
+    ]
+    ok, draft = validate_contract_draft(draft_dict)
+    assert ok is True
+    fixed_column = next(c for c in draft.columns if c.name == "senior_citizen")
+    assert fixed_column.closed_domain.values == ["0", "1"]
+
+
 if __name__ == "__main__":
     _failures: list[str] = []
     for _name, _fn in sorted(
