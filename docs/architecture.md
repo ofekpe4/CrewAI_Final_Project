@@ -12,6 +12,133 @@
 
 ---
 
+## 0. Final system overview (Phase 8–10) — the actual end-to-end pipeline
+
+> Added in Phase 11. Everything below §1 is the Phase 1 spike's own evidence
+> record and the Phase 3/5/6/7/8 addenda built on top of it — still accurate,
+> still binding, deliberately left unchanged. This section is new: it is the
+> one place the actual, final, wired-together system is described end to
+> end in a single picture, rather than as a sequence of per-phase findings.
+
+```
+data/raw/telco_customer_churn.csv
+        │
+        ▼
+┌───────────────────── Crew 1 — Data Analyst (3 Agents, Pattern A) ─────────────────────┐
+│ Data Quality Inspector 🔴 → CleaningPlan → callback executes → clean_data.csv          │
+│ EDA & Insights Analyst 🟡  → InsightsDoc  → callback renders → eda_report.html + insights.md │
+│ Data Contract Architect 🔴 → ContractDraft → callback builds  → dataset_contract.json   │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+        │  4 artifacts, copied byte-for-byte into a run-scoped snapshot
+        │  runs/<run_id>/handoff/  (Gate 8.4 — BEFORE any fault injection can touch them)
+        ▼
+inject_fault_if_requested   ← the ONE injection point (§P.1) — no-op unless --inject-failure;
+        │                      mutates ONLY the run-scoped snapshot, never artifacts/crew1/*
+        ▼
+validate_handoff  ──  the deterministic gate (contract/validator.py, §F) — ZERO LLM calls
+        │             checks families A–G (artifacts/schema/target/constraints/scale_drift/
+        │             integrity/modeling, docs/contract_spec.md §15.1); writes
+        │             artifacts/validation/validation_report.{json,md}
+        ▼
+   gate_router   (plain Python string label — the sole PASS/FAIL authority)
+        │
+  ┌─────┴──────────────────────┐
+  │ "gate_failed"               │ "gate_passed"                    │ "validation_only_complete"
+  ▼                              ▼                                   ▼
+halt_pipeline              run_scientist_crew (Crew 2)          finalize_validate_only
+  crew2_started=False        crew2_started=True                  (both crews skipped;
+  0 Crew 2 artifacts        ┌─────────────────────────────┐       --validate-only mode)
+                            │ Feature Engineer 🔴 → FeaturePlan → features.csv          │
+                            │ Modeling Specialist 🔴 → ExperimentPlan → model.joblib +  │
+                            │                                      experiments.json      │
+                            │ Responsible AI Documenter 🟡 → ModelCard → evaluation_     │
+                            │                                      report.md + model_card.md │
+                            └─────────────────────────────┘
+        │                              │                                   │
+        └──────────────┬───────────────┴───────────────────┬───────────────┘
+                        ▼                                   ▼
+              write_run_summary (EVERY terminal path converges here)
+                   artifacts/run_summary.json + artifacts/run_metadata.json
+                        │
+                        ▼
+              Streamlit app (app/) — presents, never recomputes
+```
+
+**Flow node graph, exactly as implemented** (`src/harbor_vale/flow/pipeline_flow.py`,
+`HarborValeFlow(Flow[PipelineState])`): `start_pipeline` (`@start`) →
+`load_dataset` → `run_analyst_crew` → `inject_fault_if_requested` →
+`validate_handoff` → `gate_router` (`@router`, emits exactly one of
+`"gate_failed"` / `"gate_passed"` / `"validation_only_complete"`) →
+`{halt_pipeline | run_scientist_crew → verify_crew2_outputs →
+finalize_success | finalize_validate_only}` → `write_run_summary`
+(`@listen(or_(halt_pipeline, finalize_success, finalize_validate_only))` —
+every terminal path, success or failure, converges on the same node). The
+real, rendered graph is `docs/flow_diagram.html` (regenerate with `make
+flow-diagram`; see Finding 5 below for why it is copied out of a temp
+directory rather than written directly).
+
+**`PipelineState`** (`flow/state.py`) is the only thing Flow nodes mutate —
+run id/status/failure category, `execution_mode` (`normal` /
+`validate_only` / `replay_plans`), `fault_injection` (`None` on every real
+run — no default, no env var, only an explicit CLI flag sets it), Crew 1/2
+completion + degraded-agent lists, validation passed/errors/warnings, best
+model/metric, the run-scoped `handoff_snapshot_dir`. Never a DataFrame, a
+prompt, or a `Crew`/`Agent`/`Task` object (those live as plain non-pydantic
+instance attributes on the Flow object itself, per Finding 4 below).
+
+**The three CLI modes, and where fault injection sits relative to them:**
+
+| Mode | Flag | Crew 1 runs? | Fault injection? | Crew 2 reachable? |
+|---|---|:---:|:---:|:---:|
+| `normal` | (none) | yes, live LLM | only if `--inject-failure` also given | only on gate PASS |
+| `replay_plans` | `--replay-plans` | yes, but replays stored guardrail-accepted plans through the same deterministic executors — **zero LLM calls** | only if `--inject-failure` also given (the zero-cost rehearsal path) | only on gate PASS |
+| `validate_only` | `--validate-only` | **no** — gate runs directly against the existing on-disk `artifacts/crew1/*`, never overwriting it | rejected at the CLI if combined with this mode | never — structurally skipped |
+
+Fault injection (`inject_fault_if_requested`) sits **after** `run_analyst_crew`
+and **before** `validate_handoff` in every mode that reaches it — the
+one position PROJECT_PLAN.md §P.1 requires, because it must corrupt what
+the gate sees without corrupting what Crew 1 actually produced.
+
+**`run_summary.json`** (`flow/run_summary.py`) is the Streamlit app's sole
+source of truth for one run: status, failure category/summary, dataset
+summary, Crew 1/2 completion + degraded agents, validation passed/errors/
+warnings, Crew 2's best model/primary metric, and (on any halt)
+`crew2.started: false` with an explicit reason. **`run_metadata.json`**
+(`flow/run_metadata.py`) carries the reproducibility evidence: real
+installed package versions, seeds, the LLM model name, a prompt-config
+hash, the dataset SHA256, and the git commit — never a secret.
+
+**Deterministic vs. LLM responsibility, restated as one table** (every row
+below is enforced in code, not by convention):
+
+| Decision | Who makes it |
+|---|---|
+| What cleaning operation a column needs, and why | Agent (Data Quality Inspector) |
+| Executing the cleaning plan, computing statistics, hashing bytes | Python |
+| What a column means, its unit/domain/range, exclusion classification | Agent (Data Contract Architect) |
+| Merging that judgement with measured facts into `dataset_contract.json` | Python (`contract/builder.py`) |
+| **PASS/FAIL of the handoff** | **Python only — `contract/validator.py`, zero LLM calls** |
+| Which features to use / how to transform them | Agent (Feature Engineer) |
+| Fitting the preprocessor, building `features.csv` | Python |
+| Which model variants to compare, with what metric | Agent (Modeling Specialist) |
+| Training, measuring every metric, selecting the winner | Python (`ml/train.py`, `ml/evaluate.py`, `argmax`) |
+| Writing the model card's narrative/limitations | Agent (Responsible AI Documenter) |
+| Verifying every cited metric against `experiments.json` | Python (shared `verify_metric_in_experiments`) |
+
+**Critical vs. narrative failure, restated at the Flow level:** a critical
+agent's exhausted guardrail (Data Quality Inspector, Data Contract
+Architect, Feature Engineer, Modeling Specialist) propagates up to
+`run_analyst_crew`/`run_scientist_crew` as `result.completed is False`, and
+the Flow sets `status="halted_agent_failure"` — no fallback, the halted
+crew's remaining tasks never run. A narrative agent's exhausted guardrail
+(EDA & Insights Analyst, Responsible AI Documenter) force-accepts
+internally (§ Addendum, Phase 6 Finding 2); the crew still reports
+`completed=True`, with the degraded agent name surfaced in
+`crew1_degraded`/`crew2_degraded` and a visible banner in the rendered
+artifact — the Flow never halts for a narrative failure.
+
+---
+
 ## 1. Core principle — Agent Plans, Python Executes
 
 An agent (LLM) never writes a CSV, computes a statistic, or decides PASS/FAIL. It
