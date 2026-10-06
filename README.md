@@ -5,7 +5,9 @@ Two CrewAI crews separated by a **machine-enforced dataset contract** and a
 *seam*: a contract that one crew writes and the other must honour, and a Flow that
 checks it before anything downstream is allowed to run.
 
-> **Status: Phases 0–9 complete — both crews, the Flow, and the Streamlit app implemented.**
+> **Status: Phases 0–10 complete — both crews, the Flow, the Streamlit app, and
+> the failure demonstration implemented and proven. Phase 11 (final polish,
+> documentation, and release) is in progress.**
 > The environment and core infrastructure exist and are tested (Phase 0). The
 > CrewAI execution-pattern spike is resolved (Phase 1): **Pattern A** — one
 > `Crew` of 3 sequential `Task`s per crew, each with `output_pydantic` +
@@ -67,6 +69,12 @@ checks it before anything downstream is allowed to run.
 > presents these artifacts and can invoke the pipeline itself; see
 > [Running the app](#running-the-app) and "Done — Phase 9" under
 > [Project status](#project-status) below.
+> **The failure demonstration (Phase 10) is now implemented and proven
+> live** — `make demo-fail` injects the mandatory `scale_change` fault
+> after Crew 1 and before the gate; the gate reports **`SUSPECTED SCALE
+> CHANGE — ≈100× the contract snapshot`** plus an integrity mismatch,
+> `crew2_started: false`, and Crew 2 is never invoked. See [Failure
+> Demonstration](#failure-demonstration) below.
 
 ---
 
@@ -108,9 +116,25 @@ data/raw/*  ──►  Crew 1 (Data Analyst, 3 agents)  ──►  THE HANDOFF  
 
 The orchestration pattern (**Pattern A**) and the exact CrewAI `1.15.20` runtime
 behaviour it relies on are decided and documented in
-[`docs/architecture.md`](docs/architecture.md) (Phase 1 spike). None of the
-pipeline itself is built yet — it is the target described in `PROJECT_PLAN.md`
-§C–§H.
+[`docs/architecture.md`](docs/architecture.md) (Phase 1 spike, with a Phase 11
+end-to-end overview at the top).
+
+### The six agents
+
+| # | Agent | Crew | Failure policy | Judgement call |
+|---|---|---|:---:|---|
+| 1 | Data Quality Inspector | 1 (Analyst) | 🔴 critical | What cleaning a column needs, and why |
+| 2 | EDA & Insights Analyst | 1 (Analyst) | 🟡 narrative | What a measured statistic implies for the business |
+| 3 | Data Contract Architect | 1 (Analyst) | 🔴 critical ⭐ | A column's meaning, unit, domain, range, exclusion classification |
+| 4 | Feature Engineer | 2 (Scientist) | 🔴 critical | Which columns/transforms/encoders a model should use |
+| 5 | Modeling & Experimentation Specialist | 2 (Scientist) | 🔴 critical | Which model variants and primary metric are defensible |
+| 6 | Responsible AI Documenter | 2 (Scientist) | 🟡 narrative | What the measured results and contract assumptions honestly imply |
+
+🔴 critical = exhausted guardrail retries halt the whole crew, no fallback.
+🟡 narrative = exhausted guardrail retries render a visibly `DEGRADED`
+artifact instead. Full 9-point design (role, tools, context, forbidden
+behavior, structured output, guardrail, callback, failure policy) for every
+agent: [`docs/agent_design.md`](docs/agent_design.md).
 
 ---
 
@@ -885,6 +909,43 @@ LLM calls. Seeds (`PYTHONHASHSEED=0`, `numpy` 42, sklearn
 `random_state=42`) are pinned in `config/settings.yaml` and recorded, along
 with real package versions, the prompt-config hash, the dataset SHA256, and
 the git commit, in every run's `artifacts/run_metadata.json`.
+
+---
+
+## Limitations
+
+Honest boundaries of what this project does and does not claim:
+
+- **LLM outputs can vary between fresh runs.** Two live acceptance runs of
+  the same crew with the same prompt can produce different (but both
+  schema-valid, both guardrail-passing) plans. The deterministic layer —
+  not the agent layer — is what this project claims is reproducible; see
+  [Reproducibility](#reproducibility).
+- **The Telco Customer Churn dataset's own currency/unit is undocumented**
+  by its source — the contract honestly records `currency_unspecified`
+  rather than guessing. See `data/README.md` §11 ("Explicitly UNKNOWN").
+  It is a public, educational, benchmark-style dataset, not a live
+  production feed from a real company.
+- **No hyperparameter tuning, no ensembling, no automated feature
+  selection.** The model family set (`logistic_regression`,
+  `random_forest`, `gradient_boosting`) is intentionally frozen —
+  PROJECT_PLAN.md §X deliberately keeps the ML simple so project time goes
+  into agent design, not model chasing.
+- **Fairness/bias was not quantitatively measured.** The Responsible AI
+  Documenter's `ModelCard` says so explicitly as a limitation rather than
+  implying a check that never ran — no protected-attribute metric is even
+  constructible in the `MetricClaim` schema.
+- **Streamlit is a local presentation UI**, not a deployed, authenticated,
+  multi-user application. There is no database, no auth layer, no MLOps
+  pipeline, and no CI/CD beyond running the test suite locally — all
+  deliberately out of scope (PROJECT_PLAN.md §X.1).
+- **Streamlit Cloud deployment is optional and was not pursued** for this
+  submission — the project runs locally, which satisfies every stated
+  requirement; see [Running the app](#running-the-app).
+- **The scale-drift tolerance (0.25) is calibrated against this one real
+  dataset's measured distribution** (`docs/validation_calibration.md`), not
+  derived from a general theory of what tolerance is "correct" for an
+  arbitrary dataset.
 
 ---
 
