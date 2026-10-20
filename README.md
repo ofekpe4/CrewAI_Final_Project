@@ -309,13 +309,18 @@ automation solely for screenshots):
 
 1. A successful run — the home page's PASS banner + Crew 1/Gate/Crew 2
    status (Page 1).
+   ![PASS pipeline run](docs/screenshots/01_pipeline_pass.png)
 2. The Dataset Contract page's OBSERVED vs. CONSTRAINTS boxes (Page 3).
+   ![Dataset Contract — observed vs. constraints](docs/screenshots/02_dataset_contract.png)
 3. A `make demo-fail` run — the 🎭 DEMO MODE + FAIL banners (home page /
    Page 1).
+   ![DEMO MODE + FAIL banners](docs/screenshots/03_demo_fail.png)
 4. The Validation Gate page showing the `SUSPECTED SCALE CHANGE` finding
    (Page 4).
+   ![SUSPECTED SCALE CHANGE ≈100× finding](docs/screenshots/04_scale_change_finding.png)
 5. Page 1's operator view showing Crew 2 as **NOT STARTED** with its
    reason, after the failed run.
+   ![Crew 2 NOT STARTED](docs/screenshots/05_crew2_not_started.png)
 
 ---
 
