@@ -478,3 +478,109 @@ defensible rationale, and a `ModelCard` whose limitations explicitly name
 the scale-change risk this entire project is about. No prompt change was
 made or would have been defensible given Run 2's quality — no third run was
 justified, and none was run (2/2 live runs used).
+
+---
+
+## What We Learned About Agent Design
+
+Grounded only in what this project actually observed — six agents, two real
+multi-agent `crewai==1.15.20` crews, several live acceptance runs, and one
+real failure demonstration. Nothing below is aspirational.
+
+1. **Agent Plans, Python Executes was the single idea that made everything
+   else tractable.** Every one of the six agents produces a validated,
+   structured plan; every precision-critical step (cleaning execution,
+   statistics, hashing, contract building, feature building, training,
+   metric computation, winner selection) is plain deterministic Python. This
+   is why a prompt regression (Session 31's `closed_domain` typing bug) was
+   a one-file fix with a precise blast radius, not a hunt through business
+   logic — the agent never touched the thing that broke.
+2. **Structured outputs (`output_pydantic` + a guardrail) outperform
+   free-form handoffs decisively.** Every one of the six `plans/*.py`
+   models is a closed, typed contract the next stage can trust without
+   re-parsing prose. The one place this project tried a looser handoff —
+   `context=[task]` — was deliberately restricted to narrative continuity
+   only (point 4 below), never the actual data path.
+3. **A guardrail must parse `output.raw` itself in `crewai==1.15.20` — it
+   cannot assume `output.pydantic` is already populated.** Proven twice at
+   runtime (`docs/architecture.md` §6 and its Phase 6 addendum): structural
+   parsing happens *after* the guardrail on a task's first attempt, and
+   `task.output.pydantic` is unreliable in both directions on a retry. Every
+   guardrail in this project (`guardrails.py`, both crews) owns its own
+   `model_validate_json`/`model_validate` call rather than trusting a
+   framework field that looked like it should already hold the answer.
+4. **`context=` is narrative continuity, not trusted machine state.** The
+   spike (Task 1.4) proved it hands the downstream agent the upstream
+   task's raw prompt text, divider-joined, never a typed object. Every Task
+   in both crews sets `context=` explicitly (never the default, which
+   silently injects every prior task) and the real contract always travels
+   as a callback-written artifact, read back through a scoped tool — never
+   through `context=`.
+5. **Critical vs. narrative failure policy is the only place "LLM output
+   variance" is allowed to show up in the running system, and it has to be
+   decided per-agent, not per-crew.** Four agents (Data Quality Inspector,
+   Data Contract Architect, Feature Engineer, Modeling Specialist) halt the
+   whole crew with no fallback on exhausted retries, because a guessed
+   cleaning plan, contract, feature set, or experiment design manufactures
+   false confidence — exactly the Harbor & Vale failure mode. Two agents
+   (EDA & Insights Analyst, Responsible AI Documenter) degrade visibly
+   instead, because their output is useful-but-not-load-bearing. Both
+   behaviors are mechanically proven (mocked-LLM tests) and the narrative
+   force-accept mechanism was additionally verified live.
+6. **Exact tool boundaries reduce accidental authority far more effectively
+   than prompt instructions alone.** No tool on either crew takes a free
+   path parameter; Crew 2's entire view of Crew 1 is two `Literal`-named
+   logical handles, enforced at the Pydantic schema layer (before the tool
+   body ever runs) and again by `ExactFileAllowlist` underneath. This
+   project never had to rely on an agent "choosing" not to read a forbidden
+   file — it mechanically could not construct a call that would.
+7. **Evidence keys prevent narrative metric fabrication, and the technique
+   generalizes.** `InsightsDoc.evidence_stat_key` must resolve to a real key
+   in the measured EDA statistics dictionary; `ModelCard.metrics_summary`'s
+   `MetricClaim`s must resolve to a real row in `experiments.json`, split
+   and variant included. Same idea, two different crews, two different
+   guardrails — an agent is allowed to interpret a number, never to invent
+   one.
+8. **Metric claims must be checked against machine truth, not trusted
+   because they look plausible.** `verify_metric_in_experiments` is called
+   from both `ml/evaluate.py` (the deterministic consumer) and
+   `guardrails.guardrail_model_card` (the agent-output gate) — the same
+   check, not two independent implementations that could silently drift
+   apart.
+9. **Exact column-name grounding matters more than any other single
+   prompt-quality issue this project hit.** Every real rejected draft this
+   project produced during live runs trace back to a reconstructed name
+   (snake_case invented from PascalCase, or the reverse) rather than a
+   semantic mistake. The fix that stuck was always the same shape: a
+   mechanical "copy the name character-for-character from the tool's own
+   output" instruction (`tasks.yaml`'s explicit STEP 1/2/3 process on both
+   crews), not a cleverer explanation of why the name matters.
+10. **Schema-valid JSON format has to be prompted explicitly — an LLM will
+    not reliably infer "strict JSON, no fences, no trailing commas, string-
+    type every enum value" from the schema alone.** Session 31's real,
+    live `make demo-fail` failure was not a semantic error: the Contract
+    Architect's own `target.closed_domain.values` was already correctly
+    string-typed in the same rejected draft where `SeniorCitizen`'s was not
+    — proof the schema was never the problem, only the absence of an
+    explicit, uniform rule in the task text. Two `CRITICAL` paragraphs
+    fixed it, with zero schema or guardrail change.
+11. **Live runs exposed prompt and code gaps mocked tests structurally
+    cannot reach.** The scripted-`BaseLLM` test suite (138 Crew-level checks
+    across both crews, zero API key) proves everything about guardrail
+    wiring, retry policy, and failure routing — but it cannot generate a
+    real model's actual formatting lapses. Two genuine issues only showed
+    up live: Session 27's `TotalCharges` NaN gap in `ml/features.py` (a
+    code gap, fixed in code) and Session 31's `closed_domain` typing gap (a
+    prompt gap, fixed in the prompt). Neither mocked suite would have
+    caught either — the project's actual defense is running both: fast,
+    free, deterministic mocked tests for structure and regression, and a
+    deliberately small, budgeted number of real live runs for what only a
+    real model can surface.
+12. **LLM outputs vary; deterministic replay is the actual reproducibility
+    guarantee, not a hope that the model answers the same way twice.**
+    `--replay-plans` re-executes the exact stored, guardrail-accepted plans
+    from a prior live run through the same deterministic executors, with
+    zero LLM calls — and it reproduced the identical `roc_auc` to 16
+    significant figures. That is the precise, honest claim this project
+    makes: the deterministic layer is reproducible; the agent layer is not,
+    and is never claimed to be.

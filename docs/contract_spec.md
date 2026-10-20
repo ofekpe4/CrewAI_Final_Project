@@ -340,6 +340,58 @@ identically; what actually breaks `Task(...)` construction is a
 type argument. `validate_contract_draft` uses `Tuple[bool, Any]` — still
 correct, just not the only spelling that would have worked.
 
+## 15.1 Validation gate families A–G (Phase 4/10, for reference)
+
+> Added in Phase 11. `contract/validator.py` is the deterministic, zero-LLM
+> consumer of everything this document specifies — not built in Phase 3
+> (§15 below still correctly describes what this phase does not do), but
+> by Phase 11 it is the production gate every real and demo run goes
+> through, and this document would be incomplete without naming its seven
+> check families. `CheckFamily = Literal["artifacts", "schema", "target",
+> "constraints", "scale_drift", "integrity", "modeling"]` — the exact,
+> closed set; nothing here is invented or renamed by this document.
+
+| | Family | What it checks | Representative check IDs |
+|---|---|---|---|
+| A | `artifacts` | All four required Crew 1 files present and non-empty; the contract JSON parses and is schema-valid; the CSV loads | `ARTIFACTS_CONTRACT_FILE_EXISTS`, `ARTIFACTS_CONTRACT_JSON_PARSES`, `ARTIFACTS_CSV_LOADS` |
+| B | `schema` | Every contracted column present in the CSV and vice versa; column order; dtype compatibility | `SCHEMA_MISSING_COLUMN`, `SCHEMA_UNKNOWN_COLUMN`, `SCHEMA_DTYPE_COMPATIBLE` |
+| C | `target` | The target column present, non-null, at least two classes, closed-domain-valid, and (if a `drift` policy is declared) its positive rate within tolerance of the contract's own snapshot | `TARGET_COLUMN_PRESENT`, `TARGET_CLOSED_DOMAIN`, `TARGET_POSITIVE_RATE_DRIFT` |
+| D | `constraints` | Per-column `nullable`/`business_range`/`closed_domain`, and `primary_key.unique` — only for columns that actually declare a constraint (§2, §8, §9 above) | `CONSTRAINTS_NULLABLE`, `CONSTRAINTS_BUSINESS_RANGE`, `CONSTRAINTS_CLOSED_DOMAIN`, `CONSTRAINTS_PRIMARY_KEY_UNIQUE` |
+| E ⭐ | `scale_drift` | The candidate's measured median vs. the contract's own recorded snapshot, for every column declaring a `scale_drift` policy (§10) — reports `SUSPECTED SCALE CHANGE` when the ratio matches a scale-change signature; a separate row-count drift check | `SCALE_DRIFT_MEDIAN`, `SCALE_DRIFT_ROW_COUNT` |
+| F | `integrity` | The candidate CSV's real SHA256 against `integrity.clean_data_sha256` (§11) — any byte-level edit trips this, independent of which column changed or why | `INTEGRITY_SHA256_MATCH` |
+| G | `modeling` | Minimum row count, minimum usable feature count, and that no `required_features` column is degenerate (constant) | `MODELING_MIN_ROWS`, `MODELING_MIN_FEATURES`, `MODELING_CONSTANT_REQUIRED_FEATURE` |
+
+**Severity and blocking:** every finding carries `severity: "ERROR" |
+"WARN" | "INFO"`. `ValidationReport.passed = (errors == 0)` — a run with
+only `WARN`/`INFO` findings still passes and Crew 2 still starts (the
+`contract_only_change` scenario below is the documented example: an
+unreferenced-column edit is a `SCHEMA_UNKNOWN_COLUMN` **WARNING**, never an
+ERROR). The gate evaluates **every** applicable check in every family on
+every run — it never stops at the first failure — so a single real
+incident (e.g. the mandatory ×100 `scale_change` scenario) typically
+produces findings in more than one family at once (`scale_drift` AND
+`integrity`, and — because the real contract also declares a
+`business_range` on the same column — `constraints` too): all are real,
+independently-triggered findings, not duplicates.
+
+**Enforcement vs. advisory, restated at the gate level:** hard constraints
+(declared `nullable: false`, a declared `business_range`, a declared
+`closed_domain`, `primary_key.unique: true`) can produce an ERROR.
+`excluded_features[*].enforcement` is a *contract-level*, not gate-level,
+distinction (§6 above) — the gate does not read `excluded_features` at
+all; that allowlist is Crew 2's Feature Engineer's own guardrail concern
+(`guardrail_feature_plan`), not a Phase 4 check family.
+
+**Zero-cost rehearsal of every family above:** `tests/failure/` (Phase 10)
+exercises each family through the real, unmocked `run_validation_gate`
+against either the real committed contract or the Phase 3/4 synthetic
+fixture (whichever can express the scenario — see `working flow/
+2026-10-05_session-30.md`'s Architectural Decisions for exactly which, and
+why), with only Crew 1/Crew 2 mocked. `python scripts/run_pipeline.py
+--replay-plans --inject-failure scale_change` additionally proves the
+`scale_drift`+`integrity`(+`constraints`) path through the real production
+CLI, zero LLM calls, zero `OPENAI_API_KEY` use.
+
 ## 15. What Phase 3 explicitly does NOT do
 
 - **Does not validate a candidate dataset against a contract.** No PASS/FAIL,
